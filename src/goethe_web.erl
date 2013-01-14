@@ -102,7 +102,7 @@ handle_request(Req, "/login/") ->
 handle_request(Req, "/") -> html_ok(Req, web_util:get_template("index", []));
 
 handle_request(Req, Path) ->
-	Req:serve_file(string:sub_string(Path, 2), "docroot", []).
+	Req:serve_file(string:sub_string(Path, 2), "web", []).
 	
 loop(Req) ->
 	catch case Req:get(version) of
