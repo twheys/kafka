@@ -23,7 +23,7 @@
 -include_lib("stdlib/include/qlc.hrl").
 
 -record(client_state, {
-id, nick, host,last_action,admin=false,last_msg=never,msg_count=0
+id,nick,host,last_action,admin=false,last_msg=never,msg_count=0
 }).
 
 -record(state, {

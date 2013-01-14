@@ -57,6 +57,7 @@ timeout_wait(Pid) -> Pid ! timeout.
 handle_request(Req, "/chat/send_msg/") ->
     game:chat_message(get_session(Req), web_util:get_parameter("msg", Req:parse_post())),
     json_respond(json_client_ok(<<"">>), Req);
+
 handle_request(Req, "/chat/send_priv_msg/") ->
     Msg = web_util:get_parameter("msg", Req:parse_post()),
     Target = web_util:get_parameter("target", Req:parse_post()),
@@ -82,8 +83,6 @@ handle_request(Req, "/chat/online/") ->
         {ok, Users} -> json_respond(json_client_ok(Users), Req);
         _ -> bad_session(Req)
     end;
-    
-handle_request(Req, "/chat/") -> html_ok(Req, web_util:get_template("chat", []));
 
 handle_request(Req, "/login/") ->
     Post = Req:parse_post(),
@@ -98,8 +97,6 @@ handle_request(Req, "/login/") ->
 		    html_ok(Req, web_util:get_template("index", [{error, "You are banned from the chat server. Time remaining: " ++ TimeStr}]));
 	    _ -> html_ok(Req, web_util:get_template("index", [{error, "The nickname must be alphanumeric and not blank."}]))
 	end;
-    
-handle_request(Req, "/") -> html_ok(Req, web_util:get_template("index", []));
 
 handle_request(Req, Path) ->
 	Req:serve_file(string:sub_string(Path, 2), "web", []).
