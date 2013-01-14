@@ -1,0 +1,31 @@
+-module(chat_web).
+
+-export([start_link/0]).
+
+-export([loop/1]).
+
+-export([wait_msg_id/1,wait/1,timeout_wait/1]).
+
+-define(COMET_TIMEOUT, 90000).
+
+start_link() -> mochiweb_http:start([{port, 34987}, {loop, {?MODULE, loop}}]).
+
+% Response Helpers
+html_ok(Req, Data) -> Req:ok({"text/html;charset=UTF-8", Data}).
+
+% Request handlers
+    
+handle_request(Req, "/") -> html_ok(Req, web_util:get_template("index", []));
+
+handle_request(Req, Path) ->
+	Req:serve_file(string:sub_string(Path, 2), "web", []).
+    
+handle_request(Req, "/chat/") -> html_ok(Req, web_util:get_template("chat", []));
+
+loop(Req) ->
+	catch case Req:get(version) of
+	    Version when Version >= {1, 0} -> 
+	        Path = Req:get(path),
+	        handle_request(Req, Path);
+	    _ -> ok
+	end.
