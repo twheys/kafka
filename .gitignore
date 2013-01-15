@@ -1,12 +1,14 @@
 # Compiled source #
 ###################
 ebin/*
+src/*.beam
 
 # Logs and databases #
 ######################
 *.log
 *.sql
 *.sqlite
+*~
 
 
 # Generated files #

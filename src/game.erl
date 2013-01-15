@@ -27,12 +27,12 @@ id,nick,host,last_action,admin=false,last_msg=never,msg_count=0
 }).
 
 -record(state, {
-clients=[],bans_table
+clients=[]
 }).
 
--record(user_ban, {
-host,last_nick,reason,until
-}).
+%-record(user_ban, {
+%host,last_nick,reason,until
+%}).
 
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -131,10 +131,8 @@ update_client(Client, #state{clients=Clients} = State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init(_Args) -> 
 	process_flag(trap_exit, true),
-	{ok, BansTable} = dets:open_file("bans.dets", []),
-	_ConnTable = ets:new(conns, [named_table]),
 	timer:apply_after(?CHECK_IDLE_TIME, ?MODULE, find_idle_clients, []),
-	{ok, #state{bans_table=BansTable}}.
+	{ok, #state{clients=[]}}.
 
 handle_call({join, {Nick, _Host}}, _From, State) when is_list(Nick) ->
     {reply, {error, not_available}, State};
