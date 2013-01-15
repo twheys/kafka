@@ -1,20 +1,21 @@
 -module(goethe_server).
 -behaviour(gen_server).
 
--export([start_link/0]).
+-export([start_link/2]).
 -export([init/1, handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
 
 -export([broadcast/2, send_chat/2]).
 
--define(PORT, 34986).
+-define(TCP_OPTIONS, [binary, {packet, 2}, {active, false}, {reuseaddr, true}]).
 
 -record(state, {
 sessions,procs,lasterr
 }).
 
-start_link() -> 
+start_link(Port, TcpOptions) -> 
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []),
-    bootstrap(?PORT).
+    bootstrap(Port, TcpOptions),
+    {ok, self()}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -29,10 +30,10 @@ send_chat(Msg, To) -> gen_server:cast(?MODULE, {send_chat, {Msg, To}}).
 %  internal
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-bootstrap(Port) -> gen_server:cast(?MODULE, {bootstrap, {Port}}). 
-listen_for_connections(Conn) -> gen_server:call(?MODULE, {listen_for_connections, {Conn}}).
+bootstrap(Port, TcpOptions) -> gen_server:cast(?MODULE, {bootstrap, {Port, TcpOptions}}). 
+listen_for_connections(Conn) -> gen_server:cast(?MODULE, {listen_for_connections, {Conn}}).
 accept_connection(Conn) -> gen_server:call(?MODULE, {accept_connection, {Conn}}).
-read_connection(Conn) -> gen_server:call(?MODULE, {read_connection, {Conn}}).
+read_connection(Conn) -> gen_server:cast(?MODULE, {read_connection, {Conn}}).
 send_welcome_message(SessionID) -> gen_server:cast(?MODULE, {send_welcome_message, {SessionID}}).
 send_apple(SessionID) -> gen_server:cast(?MODULE, {send_apple, {SessionID}}).
 handle_request(JSON) -> gen_server:cast(?MODULE, {handle_request, {JSON}}).
@@ -112,33 +113,18 @@ push(Conn, Msg) ->
 	end.
 
 
-init(_Args) -> 
-	process_flag(trap_exit, true),
-	{ok, #state{sessions=[]}}.
-	
-	
-    
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  gen_server exports
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_cast({bootstrap, {Port}}, _State) ->
-    case gen_tcp:listen(Port, [binary, {packet, 0}, 
-			       {reuseaddr, true},
-			       {active, false}]) of
-	{ok, Conn} ->
-	    listen_for_connections(Conn),
-	    ok;
-	Other ->
-	    Other,
-	    no_reply
-    end;
+init(_Args) -> 
+	process_flag(trap_exit, true),
+	{ok, #state{sessions=[]}}.
 
 handle_cast({send_welcome_message, {SessionID}}, State) ->
 	Conn = get_connection(SessionID, State),
-	push(Conn, [{message, <<"Welcome to Goethe! Please authenticate...">>}, {sessionID, SessionID}]);
+	push(Conn, [{message, "Welcome to Goethe! Please authenticate..."}, {sessionID, SessionID}]);
 
 handle_cast({broadcast, {Msg, Except}}, State) ->
 	[send_chat(Id, Msg) || {Id, _} <- State, lists:member(Id, Except) == false],
@@ -147,7 +133,7 @@ handle_cast({broadcast, {Msg, Except}}, State) ->
 handle_cast({send_chat, {{NickFrom, Visibility, Text}}, To}, State) ->
 	Conn = get_connection(To, State),
 	push(Conn, [
-		{action, <<"chat_message">>},
+		{action, "chat_message"},
 		{from, NickFrom},
 		{visibility, Visibility},
 		{text, Text}
@@ -155,33 +141,56 @@ handle_cast({send_chat, {{NickFrom, Visibility, Text}}, To}, State) ->
     {noreply, State};
 
 handle_cast({send_handle_request, {
-	[{action, <<"get_salt">>},
+	[{action, "get_salt"},
 	{sessionID, SessionID}
 	]}}, _) ->
-	send_apple(SessionID).
+	send_apple(SessionID);
+	
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  hidden gen_server methods (Used internally)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_cast({bootstrap, {Port, TcpOptions}}, State) ->
+    logger:info("Hello! Welcome to Goethe. Server is now initializing."),
+    logger:info("Bootstrapping server. Using Port " ++ integer_to_list(Port)),
+    case gen_tcp:listen(Port, TcpOptions) of
+	{ok, Conn} ->
+	    logger:info("Server successfully bootstrapped!  Now listening for incoming connections."),
+	    listen_for_connections(Conn),
+	    {noreply, State};
+	Other ->
+	    Other,
+	    {noreply, State}
+    end;
 
-handle_call({listen_for_connections, Conn}, From, #state{procs=Procs,lasterr=LastError} = State) ->
+handle_cast({listen_for_connections, Conn}, #state{procs=Procs,lasterr=LastError} = State) ->
     receive
 	{_, connected} ->
+        logger:info("Received a new connection from " ++ lists:flatten(Conn)),
+        logger:info("There are now " ++ integer_to_list(Procs) ++ " clients connected"),
 	    accept_connection(Conn),
 	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {ok, State#state{procs=Procs+1}};
+	    {noreply, State#state{procs=Procs+1}};
 	{'EXIT', _, {error, Reason}} ->
 		report_error(State, Reason),
 	    accept_connection(Conn),
 	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {ok, State#state{procs=Procs+1}};
+	    {noreply, State#state{procs=Procs+1}};
 	{'EXIT', _, _} ->
 	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {no_reply, State#state{procs=Procs-1}};
+	    {noreply, State#state{procs=Procs-1}};
 	{From, status} ->
 	    From ! {self(), {ok, [{procs, Procs}, {lasterr, LastError}]}},
 	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    normal;
+	    {noreply, State};
 	{_From, stop} ->
-	    gen_event:stop(stop), %% propagate EXIT to all Pids
-	    normal
+	    {stop, stop_message_received, State}
     end;
+    
+handle_cast({read_connection, Conn}, State) ->
+    read_pipe(State, Conn, list_to_binary([])).
     
 handle_call({accept_connection, Conn}, From, State) ->
     case gen_tcp:accept(Conn) of
@@ -190,18 +199,15 @@ handle_call({accept_connection, Conn}, From, State) ->
         read_connection(Socket),
         {SessionID, NewState} = create_session(Socket, State),
         send_welcome_message(SessionID),
-        {ok, NewState};
+        {reply, connected, NewState};
 	{error, Reason} ->
 	    From ! {'EXIT', self(), Reason},
-	    {no_reply, State}
-	end;
-
-handle_call({read_connection, Conn}, _, State) ->
-    read_pipe(State, Conn, list_to_binary([])).
+	    {reply, {error, Reason}, State}
+	end.
 
 
 
 handle_info(_Info, State) -> {noreply, State}.
-terminate(_Reason, _State) -> normal.
+terminate(_Reason, State) -> {normal, State}.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
