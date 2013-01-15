@@ -6,8 +6,6 @@
 
 -export([broadcast/2, send_chat/2]).
 
--define(TCP_OPTIONS, [binary, {packet, 2}, {active, false}, {reuseaddr, true}]).
-
 -record(state, {
 sessions,procs,lasterr
 }).
@@ -22,8 +20,8 @@ start_link(Port, TcpOptions) ->
 %  public api
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-broadcast(Msg, Except) -> gen_server:cast(?MODULE, {broadcast, {Msg, Except}}).
-send_chat(Msg, To) -> gen_server:cast(?MODULE, {send_chat, {Msg, To}}).
+broadcast(Msg, Except) -> gen_server:call(?MODULE, {broadcast, {Msg, Except}}).
+send_chat(Msg, To) -> gen_server:call(?MODULE, {send_chat, {Msg, To}}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -31,12 +29,11 @@ send_chat(Msg, To) -> gen_server:cast(?MODULE, {send_chat, {Msg, To}}).
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 bootstrap(Port, TcpOptions) -> gen_server:cast(?MODULE, {bootstrap, {Port, TcpOptions}}). 
-listen_for_connections(Conn) -> gen_server:cast(?MODULE, {listen_for_connections, {Conn}}).
-accept_connection(Conn) -> gen_server:call(?MODULE, {accept_connection, {Conn}}).
+accept_connections(Conn) -> gen_server:cast(?MODULE, {accept_connections, {Conn}}).
 read_connection(Conn) -> gen_server:cast(?MODULE, {read_connection, {Conn}}).
 send_welcome_message(SessionID) -> gen_server:cast(?MODULE, {send_welcome_message, {SessionID}}).
-send_apple(SessionID) -> gen_server:cast(?MODULE, {send_apple, {SessionID}}).
-handle_request(JSON) -> gen_server:cast(?MODULE, {handle_request, {JSON}}).
+%send_apple(SessionID) -> gen_server:cast(?MODULE, {send_apple, {SessionID}}).
+receive_cmd(JSON) -> gen_server:cast(?MODULE, {receive_cmd, {JSON}}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -89,7 +86,7 @@ process_inc(State, Conn, Binary) ->
 read_json(Binary) ->
     try 
         {struct, JSON} = mochijson2:decode(Binary),
-        handle_request(JSON),
+        receive_cmd(JSON),
         continue
     catch 
         error:_ -> {more, Binary}
@@ -120,17 +117,17 @@ push(Conn, Msg) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init(_Args) -> 
 	process_flag(trap_exit, true),
-	{ok, #state{sessions=[]}}.
+	{ok, #state{sessions=[],procs=0}}.
 
-handle_cast({send_welcome_message, {SessionID}}, State) ->
+handle_call({send_welcome_message, {SessionID}}, _, State) ->
 	Conn = get_connection(SessionID, State),
 	push(Conn, [{message, "Welcome to Goethe! Please authenticate..."}, {sessionID, SessionID}]);
 
-handle_cast({broadcast, {Msg, Except}}, State) ->
+handle_call({broadcast, {Msg, Except}}, _, State) ->
 	[send_chat(Id, Msg) || {Id, _} <- State, lists:member(Id, Except) == false],
     {noreply, State};
 
-handle_cast({send_chat, {{NickFrom, Visibility, Text}}, To}, State) ->
+handle_call({send_chat, {{NickFrom, Visibility, Text}}, To}, _, State) ->
 	Conn = get_connection(To, State),
 	push(Conn, [
 		{action, "chat_message"},
@@ -138,13 +135,7 @@ handle_cast({send_chat, {{NickFrom, Visibility, Text}}, To}, State) ->
 		{visibility, Visibility},
 		{text, Text}
 		]),
-    {noreply, State};
-
-handle_cast({send_handle_request, {
-	[{action, "get_salt"},
-	{sessionID, SessionID}
-	]}}, _) ->
-	send_apple(SessionID);
+    {noreply, State}.
 	
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -158,53 +149,34 @@ handle_cast({bootstrap, {Port, TcpOptions}}, State) ->
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Conn} ->
 	    logger:info("Server successfully bootstrapped!  Now listening for incoming connections."),
-	    listen_for_connections(Conn),
+	    accept_connections(Conn),
 	    {noreply, State};
 	Other ->
 	    Other,
 	    {noreply, State}
     end;
-
-handle_cast({listen_for_connections, Conn}, #state{procs=Procs,lasterr=LastError} = State) ->
-    receive
-	{_, connected} ->
-        logger:info("Received a new connection from " ++ lists:flatten(Conn)),
-        logger:info("There are now " ++ integer_to_list(Procs) ++ " clients connected"),
-	    accept_connection(Conn),
-	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {noreply, State#state{procs=Procs+1}};
-	{'EXIT', _, {error, Reason}} ->
-		report_error(State, Reason),
-	    accept_connection(Conn),
-	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {noreply, State#state{procs=Procs+1}};
-	{'EXIT', _, _} ->
-	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {noreply, State#state{procs=Procs-1}};
-	{From, status} ->
-	    From ! {self(), {ok, [{procs, Procs}, {lasterr, LastError}]}},
-	    proc_lib:hibernate(?MODULE, listen_for_connections, {Conn}),
-	    {noreply, State};
-	{_From, stop} ->
-	    {stop, stop_message_received, State}
-    end;
     
-handle_cast({read_connection, Conn}, State) ->
-    read_pipe(State, Conn, list_to_binary([])).
+handle_cast({read_connection, {Conn}}, #state{procs=Procs} = State) ->
+    read_pipe(State, Conn, list_to_binary([])),
+    State#state{procs=Procs-1};
     
-handle_call({accept_connection, Conn}, From, State) ->
+handle_cast({accept_connections, {Conn}}, #state{procs=Procs} = State) ->
+    logger:info("There are now " ++ integer_to_list(Procs) ++ " clients connected"),
     case gen_tcp:accept(Conn) of
-	{ok, Socket} ->
-	    From ! {self(), connected},
-        read_connection(Socket),
-        {SessionID, NewState} = create_session(Socket, State),
+	{ok, Listener} ->
+        logger:info("Received a new connection from " ++ Conn),
+        read_connection(Listener),
+	    accept_connections(Conn),
+        {SessionID, NewState} = create_session(Listener, State),
         send_welcome_message(SessionID),
-        {reply, connected, NewState};
+        {noreply, connected, NewState};
 	{error, Reason} ->
-	    From ! {'EXIT', self(), Reason},
-	    {reply, {error, Reason}, State}
-	end.
+	    accept_connections(Conn),
+	    {noreply, {error, Reason}, State}
+	end;
 
+handle_cast({receive_cmd, {Command}}, State) ->
+	{noreply, State}.
 
 
 handle_info(_Info, State) -> {noreply, State}.
