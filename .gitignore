@@ -1,6 +1,6 @@
 # Compiled source #
 ###################
-*.beam
+ebin/*
 
 # Logs and databases #
 ######################
