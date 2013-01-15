@@ -1,0 +1,15 @@
+# Compiled source #
+###################
+*.beam
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+
+# Generated files #
+###################
+*.dets
+*.dump
