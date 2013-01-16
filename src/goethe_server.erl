@@ -29,8 +29,8 @@ send_chat(Msg, To) -> gen_server:call(?MODULE, {send_chat, {Msg, To}}).
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 bootstrap(Port, TcpOptions) -> gen_server:cast(?MODULE, {bootstrap, {Port, TcpOptions}}). 
-accept_connections(Conn) -> gen_server:cast(?MODULE, {accept_connections, {Conn}}).
-read_connection(Conn) -> gen_server:cast(?MODULE, {read_connection, {Conn}}).
+wait_for_connection(Conn) -> gen_server:cast(?MODULE, {wait_for_connection, {Conn}}).
+listen(Conn) -> gen_server:cast(?MODULE, {listen, {Conn}}).
 send_welcome_message(SessionID) -> gen_server:cast(?MODULE, {send_welcome_message, {SessionID}}).
 %send_apple(SessionID) -> gen_server:cast(?MODULE, {send_apple, {SessionID}}).
 receive_cmd(JSON) -> gen_server:cast(?MODULE, {receive_cmd, {JSON}}).
@@ -59,6 +59,7 @@ create_session(Conn, #state{sessions=Sessions} = State) ->
     {SessionID, State#state{sessions=[{SessionID, Conn} | Sessions]}}.
     
 read_pipe(State, Conn, Ack) ->
+	logger:trace("Buffering client input: " + Ack),
     case gen_tcp:recv(Conn, 0) of
 	{ok, Binary} when size(Ack) == 0 ->
 	    process_inc(State, Conn, Binary);
@@ -148,30 +149,38 @@ handle_cast({bootstrap, {Port, TcpOptions}}, State) ->
     logger:info("Bootstrapping server. Using Port " ++ integer_to_list(Port)),
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Conn} ->
-	    logger:info("Server successfully bootstrapped!  Now listening for incoming connections."),
-	    accept_connections(Conn),
+	    logger:info("Server successfully bootstrapped!  Now waiting for connections..."),
+	    wait_for_connection(Conn),
 	    {noreply, State};
 	Other ->
 	    Other,
 	    {noreply, State}
     end;
     
-handle_cast({read_connection, {Conn}}, #state{procs=Procs} = State) ->
+handle_cast({listen, {Conn}}, #state{procs=Procs} = State) ->
+	logger:debug("Listening to client..."),
     read_pipe(State, Conn, list_to_binary([])),
-    State#state{procs=Procs-1};
+	logger:debug("Client disconnected."),
+    {noreply, State#state{procs=Procs-1}};
     
-handle_cast({accept_connections, {Conn}}, #state{procs=Procs} = State) ->
+handle_cast({wait_for_connection, {Conn}}, #state{procs=Procs} = State) ->
     logger:info("There are now " ++ integer_to_list(Procs) ++ " clients connected"),
     case gen_tcp:accept(Conn) of
 	{ok, Listener} ->
-        logger:info("Received a new connection from " ++ Conn),
-        read_connection(Listener),
-	    accept_connections(Conn),
+        logger:info("Received a new connection from " ++ Listener),
+        listen(Listener),
+        logger:trace("Waiting for next connection..."),
+	    wait_for_connection(Conn),
+        logger:trace("Creating new session..."),
         {SessionID, NewState} = create_session(Listener, State),
+        logger:info("Created a new session with Session ID " ++ SessionID),
+        logger:trace("Greeting client..."),
         send_welcome_message(SessionID),
-        {noreply, connected, NewState};
+        logger:trace("Client greeted."),
+        {noreply, connected, NewState#state{procs=Procs+1}};
 	{error, Reason} ->
-	    accept_connections(Conn),
+	    wait_for_connection(Conn),
+	    log:error("Error in connection " ++ Reason),
 	    {noreply, {error, Reason}, State}
 	end;
 

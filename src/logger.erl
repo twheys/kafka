@@ -48,19 +48,20 @@ init([File, LogLevel]) ->
     {error, Reason} -> report_error(Reason)
     end.
 
-handle_event({fatal, Msg}, #state{logfile=Fd,level=debug} = State) ->
+% TODO need to check logger level before logging
+handle_event({fatal, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
     io:format(Fd, "[error] ~p~n", [Msg]),
     ok_state(State);
-handle_event({warn, Msg}, #state{logfile=Fd,level=debug} = State) ->
+handle_event({warn, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
     io:format(Fd, "[warn] ~p~n", [Msg]),
     ok_state(State);
-handle_event({info, Msg}, #state{logfile=Fd,level=debug} = State) ->
+handle_event({info, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
     io:format(Fd, "[info] ~p~n", [Msg]),
     ok_state(State);
-handle_event({debug, Msg}, #state{logfile=Fd,level=debug} = State) ->
+handle_event({debug, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
     io:format(Fd, "[debug] ~p~n", [Msg]),
     ok_state(State);
-handle_event({trace, Msg}, #state{logfile=Fd,level=debug} = State) ->
+handle_event({trace, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
     io:format(Fd, "[trace] ~p~n", [Msg]),
     ok_state(State).
  
