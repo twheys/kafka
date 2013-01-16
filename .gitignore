@@ -2,6 +2,7 @@
 ###################
 ebin/*
 src/*.beam
+examples/*/ebin/*
 
 # Logs and databases #
 #######################
