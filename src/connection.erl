@@ -2,6 +2,9 @@
 
 -export([create_connection/1]).
 
+% States
+-export([initial/1,active/1]).
+
 % Events
 -export([reinitialize/1,activate/1]).
 
@@ -41,16 +44,20 @@ activate(Connection) -> Connection ! active.
 listen(Connection, Sock) ->
 	goethe_server:increment_procs(),
 	logger:debug("Listening to client..."),
-    read_pipe(Connection, Sock),
+    ExitStatus = read_pipe(Connection, Sock),
 	logger:debug("Client disconnected."),
-	goethe_server:decrement_procs().
+	goethe_server:decrement_procs(),
+	Connection ! {dead, ExitStatus}.
     
 read_pipe(Connection, Sock) ->
     case gen_tcp:recv(Sock, 0) of
-	    {ok, Binary}  -> Connection ! {read, Binary};
-	    {error, Reason} -> logger:fatal("Bad read? ")
-    end,
-    proc_lib:hibernate(?MODULE, read_pipe, [Connection, Sock]).
+	    {ok, Binary}  ->
+	    	Connection ! {read, Binary},
+	    	proc_lib:hibernate(?MODULE, read_pipe, [Connection, Sock]);
+	    {error, Reason} -> 
+	    	logger:fatal("Bad read!"),
+	    	{error, Reason}
+    end.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -67,34 +74,40 @@ initial(#data{sock=Sock} = Data) ->
 		{read, Raw} -> 
 			String = binary_to_list(Raw),
 			{struct, JSON} = mochijson2:decode(String),
-			game:action(JSON, self());
+			game:action(unencrypted, JSON, self()),
+			proc_lib:hibernate(?MODULE, initial, [Data]);
 		{write, JSON} -> 
 			String = mochijson2:encode({struct, JSON}),
 			Raw = list_to_binary(String),
-			goethe_server:push(Sock, Raw);
+			goethe_server:push(Sock, Raw),
+			proc_lib:hibernate(?MODULE, initial, [Data]);
 		active -> 
 			active(Data);
+		{dead, _Reason} ->
+			ok;
 		Other -> 
 			goethe_server:report_error({unexpected_event, {active, Other}})
-	end,
-	proc_lib:hibernate(?MODULE, initial, [Data]).
+	end.
 
 active(#data{sock=Sock} = Data) ->
 	receive
 		{read, Raw} -> 
 			String = binary_to_list(Raw),
 			{struct, JSON} = mochijson2:decode(String),
-			game:action(JSON, self());
+			game:action(encrypted, JSON, self()),
+			proc_lib:hibernate(?MODULE, active, [Data]);
 		{write, JSON} -> 
 			String = mochijson2:encode({struct, JSON}),
 			Raw = list_to_binary(String),
-			goethe_server:push(Sock, Raw);
+			goethe_server:push(Sock, Raw),
+			proc_lib:hibernate(?MODULE, active, [Data]);
 		initial -> 
 			initial(Data);
+		{dead, _Reason} ->
+			ok;
 		Other -> 
 			goethe_server:report_error({unexpected_event, {active, Other}})
-	end,
-	proc_lib:hibernate(?MODULE, active, [Data]).
+	end.
 
 
 

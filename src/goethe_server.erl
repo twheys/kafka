@@ -4,7 +4,7 @@
 -export([start_link/2]).
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
 
--export([push/2,increment_procs/0,decrement_procs/0,report_error/1]).
+-export([push/2,increment_procs/0,decrement_procs/0,report_error/1,get_procs/0]).
 
 % Internal Exports
 -export([wait_for_connection/1]).
