@@ -3,7 +3,7 @@
 
 -export([start_link/1, init/1]).
 
--define(TCP_OPTIONS, [binary, {packet, 2}, {active, false}, {reuseaddr, true}]).
+-define(TCP_OPTIONS, [binary, {packet, 0}, {active, false}, {reuseaddr, true}]).
 -define(PORT, 34986).
 -define(LOGFILE, "logs/goethe.log").
 -define(LOGLEVEL, trace).

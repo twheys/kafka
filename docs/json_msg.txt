@@ -1,0 +1,5 @@
+{[{<<"action">>,[{[{<<"name">>,<<"server.welcome">>}]},{[{<<"note">>,<<"Welcome to Goethe! Please authenticate...">>}]}]}]}
+{"action":[{"name":"server.welcome"},{"note":"Welcome to Goethe! Please authenticate..."}]}
+
+{[{<<"action">>,[{[{<<"name">>,<<"client.ping">>}]}]}]}
+{"action":[{"name":"client.ping"}]}

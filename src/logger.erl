@@ -5,6 +5,7 @@
 -export([init/1,handle_event/2,handle_call/2,handle_info/2,terminate/2,code_change/3]).
 
 -export([fatal/1,warn/1,info/1,debug/1,trace/1]).
+-export([fatal/2,warn/2,info/2,debug/2,trace/2]).
 
 -record(state, {
 logfile,level
@@ -25,6 +26,12 @@ warn(Msg) -> gen_event:notify(logger, {warn, Msg}).
 info(Msg) -> gen_event:notify(logger, {info, Msg}).
 debug(Msg) -> gen_event:notify(logger, {debug, Msg}).
 trace(Msg) -> gen_event:notify(logger, {trace, Msg}).
+
+fatal(Msg, Params) when is_list(Params) -> gen_event:notify(logger, {fatal, Msg, Params}).
+warn(Msg, Params) when is_list(Params) -> gen_event:notify(logger, {warn, Msg, Params}).
+info(Msg, Params) when is_list(Params) -> gen_event:notify(logger, {info, Msg, Params}).
+debug(Msg, Params) when is_list(Params) -> gen_event:notify(logger, {debug, Msg, Params}).
+trace(Msg, Params) when is_list(Params) -> gen_event:notify(logger, {trace, Msg, Params}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -49,20 +56,13 @@ init([File, LogLevel]) ->
     end.
 
 % TODO need to check logger level before logging
-handle_event({fatal, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
-    io:format(Fd, "[error] ~p~n", [Msg]),
+handle_event({LogLevel, Msg}, #state{logfile=Fd,level=_FilterLogLevel} = State) ->
+    error_logger:info_msg(Msg),
     ok_state(State);
-handle_event({warn, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
-    io:format(Fd, "[warn] ~p~n", [Msg]),
-    ok_state(State);
-handle_event({info, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
-    io:format(Fd, "[info] ~p~n", [Msg]),
-    ok_state(State);
-handle_event({debug, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
-    io:format(Fd, "[debug] ~p~n", [Msg]),
-    ok_state(State);
-handle_event({trace, Msg}, #state{logfile=Fd,level=_LogLevel} = State) ->
-    io:format(Fd, "[trace] ~p~n", [Msg]),
+handle_event({LogLevel, Msg, Params}, #state{logfile=Fd,level=_FilterLogLevel} = State) ->
+    error_logger:info_msg(Msg, Params),
+    %OutputMsg = lists:flatten(io_lib:format(Msg, Params)),
+    %io:format(Fd, "[~p] ~p~n", [LogLevel, OutputMsg]),
     ok_state(State).
  
 handle_call(_, State) -> {ok, ok, State}.

@@ -26,25 +26,43 @@ action(SecurityLevel, [
 	], Connection) ->
 	action(SecurityLevel, FirstAction, Connection),
 	action(SecurityLevel, Rest, Connection);
-action(unencypted, [
-	{action, [
-		{name, "apple"}
-	]}], Connection) ->
-	gen_server:call(?MODULE, get_apple, [Connection]);
-action(encrypted, [
-	{action, [
-		{name, "authenticate"}, 
-		{username, Username},
-		{password, Password}
-	]}], Connection) -> 
-	gen_server:call(?MODULE, authenticate, [Connection, Username, Password]);
-action(encrypted, [
-	{action, [
-		{name, ActionName} |
-		Params
-	]}], Connection) ->
-	gen_server:call(?MODULE, send_to_module, [ActionName, Params, Connection]);
-action(_SecurityLevel, _JSON, Connection) -> gen_server:call(?MODULE, invalid_action, [Connection]).
+action(unencypted, {
+    {[{<<"action">>,
+        [
+        {[{<<"name">>,<<"client.get_apple">>}]},
+        {[{<<"note">>,<<"Welcome to Goethe! Please authenticate...">>}]}
+        ]
+    }]}
+    }, Connection) ->
+	gen_server:call(?MODULE, {get_apple, {Connection}});
+action(unencypted, {
+    {[{<<"action">>,
+        [
+        {[{<<"name">>,<<"client.ping">>}]}
+        ]
+    }]}
+    }, Connection) ->
+	gen_server:call(?MODULE, {ping, {Connection}});
+action(encrypted, {
+    {[{<<"action">>,
+        [
+        {[{<<"name">>,<<"client.authenticate">>}]},
+        {[{<<"username">>,Username}]},
+        {[{<<"password">>,Password}]}
+        ]
+    }]}
+    }, Connection) -> 
+	gen_server:call(?MODULE, {authenticate, {Connection, Username, Password}});
+action(encrypted, {
+    {[{<<"action">>,
+        [
+        {[{<<"name">>,ActionName}]} |
+        Params
+        ]
+    }]}
+    }, Connection) ->
+	gen_server:call(?MODULE, {send_to_module, {ActionName, Params, Connection}});
+action(_SecurityLevel, JSON, Connection) -> gen_server:call(?MODULE, {invalid_action, {Connection, JSON}}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -52,6 +70,22 @@ action(_SecurityLevel, _JSON, Connection) -> gen_server:call(?MODULE, invalid_ac
 %  gen_server exports
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_call({ping, {Connection}}, _From, State) ->
+    logger:info("Received ping from client"),
+	Connection ! {write, {
+	    [{
+	        <<"action">>,
+            {
+	            <<"name">>,
+                <<"server.pong">>
+            }
+        }]
+    }},
+    {reply, ok, State};
+
+handle_call({invalid_action, {_Connection, JSON}}, _From, State) ->
+    logger:error("Invalid client action! Msg: ~p", JSON),
+    {reply, ok, State};
 handle_call(_Call, _From, State) -> {noreply, State}.
 handle_cast(_Cast, State) -> {noreply, State}.
 handle_info(_Info, State) -> {noreply, State}.
