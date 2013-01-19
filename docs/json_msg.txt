@@ -3,3 +3,10 @@
 
 {[{<<"action">>,[{[{<<"name">>,<<"client.ping">>}]}]}]}
 {"action":[{"name":"client.ping"}]}
+
+
+{[{<<"action">>,[{[{<<"name">>,<<"client.get_apple">>}]},{[{<<"note">>,<<"Welcome to Goethe! Please authenticate...">>}]}]}]}
+{"action":[{"name":"client.get_apple"},{"note":"Welcome to Goethe! Please authenticate..."}]}
+
+{[{<<"action">>,[{[{<<"name">>,<<"client.encrypt">>}]}]}]}
+{"action":[{"name":"client.encrypt"}]}

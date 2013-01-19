@@ -8,6 +8,8 @@
 
 -export([unicode_clean/1]).
 
+-export([json_encode/1,json_decode/1]).
+
 
 get_interval_str(Secs) when Secs =< 60 -> io_lib:format("~p seconds", [trunc(Secs)]);
 get_interval_str(Secs) when Secs =< 3600 -> io_lib:format("~p minutes, ", [trunc(Secs / 60)]) ++ get_interval_str(Secs rem 60);
@@ -58,3 +60,16 @@ hexstr_to_bin([], Acc) ->
 hexstr_to_bin([X,Y|T], Acc) ->
   {ok, [V], []} = io_lib:fread("~16u", [X,Y]),
   hexstr_to_bin(T, [V | Acc]).
+
+
+json_encode(Tuple) ->
+    try {ok, ejson:encode(Tuple)}
+    catch
+      Reason -> {error, Reason}
+    end.
+
+json_decode(Bin) ->
+    try {ok, ejson:decode(Bin)}
+    catch
+      Reason -> {error, Reason}
+    end.

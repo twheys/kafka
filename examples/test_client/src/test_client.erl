@@ -1,7 +1,6 @@
 -module(test_client).
 
--export([start/0]).
--export([client/1]).
+-compile(export_all).
 
 -define(TCP_OPTIONS, [binary, {active, false}]).
 -define(ADDRESS, "localhost").
@@ -9,21 +8,87 @@
 
 start() ->
     io:format("CLIENT connecting~n"),
-    {ok, Sock} = gen_tcp:connect(?ADDRESS, ?PORT, ?TCP_OPTIONS),
-    gen_tcp:controlling_process(Sock, self()),
-    spawn_link(?MODULE, client, [Sock]).
+    spawn_link(?MODULE, bootstrap, [?ADDRESS, ?PORT]).
+
+bootstrap(Address, Port) ->
+    {ok, Sock} = gen_tcp:connect(Address, Port, ?TCP_OPTIONS),
+    client(Sock).
 
 client(Sock) ->
-	io:format("Listening for read/write orders in client mode!"),
     inet:setopts(Sock, [{active, once}]),
     receive
 	    {tcp, Sock, Bin}  ->
-            io:format("CLIENT receiving~n"),
-            JSON = ejson:decode(Bin),
-            receive_cmd(JSON),
-            proc_lib:hibernate(?MODULE, client, [Sock]);
-	    {tcp_closed, Sock, closed} -> io:format("Connection closed!");
-        Other -> io:format("Socket error! Reason: ~p", Other)
+            io:format("CLIENT RECV: ~s~n", [binary_to_list(Bin)]),
+            client(Sock);
+	    {tcp_closed, Sock} -> io:format("Connection closed!~n");
+
+        {send, Msg} -> 
+            io:format("CLIENT SEND: ~s~n", [binary_to_list(Msg)]),
+            gen_tcp:send(Sock, Msg),
+            client(Sock);
+
+        disconnect -> 
+            gen_tcp:close(Sock),
+            ok;
+
+        {reconnect, {Address, Port}} -> 
+            gen_tcp:close(Sock),
+            bootstrap(Address, Port);
+
+        reconnect -> 
+            gen_tcp:close(Sock),
+            bootstrap(?ADDRESS, ?PORT);
+
+        reload -> 
+            test_client:client(Sock);
+
+
+        Other -> io:format("Socket error! Reason: ~W~n", Other)
     end.
-    
-receive_cmd(Command) -> io:format("CLIENT RECEIVING COMMAND: ~p~n", [Command]).
+
+
+disconnect(Pid) ->
+    Pid ! disconnect.
+
+reconnect(Pid) ->
+    Pid ! reconnect.
+
+reconnect(Pid, Address, Port) ->
+    Pid ! {reconnect, {Address, Port}}.
+
+reload(Pid) ->
+    Pid ! reload.
+
+send_junk(Pid) ->
+    Pid ! {send, <<"}{Q#RQ{#Q}ASCa]sc[s]fva [f#}RAFVS{}Fser]w3[rfd">>}.
+
+ping(Pid) ->
+    Pid ! {send, <<"{\"action\":\"client.ping\"}]}">>}.
+
+get_apple(Pid) ->
+    Pid ! {send, <<"{\"action\":\"client.get_apple\"}]}">>}.
+
+encrypt(Pid) ->
+    Pid ! {send, <<"{\"action\":\"client.encrypt\"}]}">>}.
+
+authenticate(Pid, UserName, Password) ->
+    Pid ! {send, list_to_binary([
+            <<"{\"client.authenticate\":[">>,
+            <<"{\"username\":\"">>, 
+            UserName, 
+            <<"\"},">>,
+            <<"{\"password\":\"">>,
+            Password,
+            <<"\"}]}">>
+        ])}.
+
+get_rooms(Pid) ->
+    Pid ! {send, <<"{\"action\":\"client.get_rooms\"}]}">>}.
+
+get_rooms(Pid, RoomName) ->
+    Pid ! {send, list_to_binary([
+            <<"{\"client.join_room\":[">>,
+            <<"{\"room\":\"">>, 
+            RoomName, 
+            <<"\"}]}">>
+        ])}.

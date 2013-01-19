@@ -3,7 +3,7 @@
 
 -export([start_link/1, init/1]).
 
--define(TCP_OPTIONS, [binary, {packet, 0}, {active, false}, {reuseaddr, true}]).
+-define(TCP_OPTIONS, [binary, {active, false}]).
 -define(PORT, 34986).
 -define(LOGFILE, "logs/goethe.log").
 -define(LOGLEVEL, trace).
@@ -18,7 +18,7 @@ init(_Args) ->
 	[
         {logger, {logger, start_link, [?LOGFILE,?LOGLEVEL]}, 
             permanent, 5000, worker, [logger]},
-	    {goethe_server, {goethe_server, start_link, [?PORT, ?TCP_OPTIONS]},
+	    {goethe_server, {goethe_server, new_link, [?PORT, ?TCP_OPTIONS]},
 	        permanent, 5000, worker, [goethe_server]},
         {game, {game, start_link, []}, 
             permanent, 5000, worker, [game]}
