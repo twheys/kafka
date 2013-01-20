@@ -56,10 +56,10 @@ init([File, LogLevel]) ->
     end.
 
 % TODO need to check logger level before logging
-handle_event({LogLevel, Msg}, #state{logfile=Fd,level=_FilterLogLevel} = State) ->
+handle_event({_LogLevel, Msg}, #state{logfile=_Fd,level=_FilterLogLevel} = State) ->
     error_logger:info_msg(Msg),
     ok_state(State);
-handle_event({LogLevel, Msg, Params}, #state{logfile=Fd,level=_FilterLogLevel} = State) ->
+handle_event({_LogLevel, Msg, Params}, #state{logfile=_Fd,level=_FilterLogLevel} = State) ->
     error_logger:info_msg(Msg, Params),
     %OutputMsg = lists:flatten(io_lib:format(Msg, Params)),
     %io:format(Fd, "[~p] ~p~n", [LogLevel, OutputMsg]),

@@ -1,9 +1,9 @@
 -module(goethe_sup).
 -behaviour(supervisor).
+-author("twheys@gmail.com").
 
 -export([start_link/1, init/1]).
 
--define(TCP_OPTIONS, [binary, {active, false}]).
 -define(PORT, 34986).
 -define(LOGFILE, "logs/goethe.log").
 -define(LOGLEVEL, trace).
@@ -18,8 +18,10 @@ init(_Args) ->
 	[
         {logger, {logger, start_link, [?LOGFILE,?LOGLEVEL]}, 
             permanent, 5000, worker, [logger]},
-	    {goethe_server, {goethe_server, new_link, [?PORT, ?TCP_OPTIONS]},
-	        permanent, 5000, worker, [goethe_server]},
-        {game, {game, start_link, []}, 
-            permanent, 5000, worker, [game]}
+        {game_server, {goethe, new_singleton_link, []}, 
+            permanent, 5000, worker, [goethe]},
+        {socket_server, {goethe, new_socket_link, [?PORT]},
+            permanent, 10000, worker, [goethe]},
+        {game_api, {goethe, new_api_link, []},
+            permanent, 5000, worker, [goethe]}
 	]}}.

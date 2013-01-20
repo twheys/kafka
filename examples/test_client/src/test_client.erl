@@ -1,4 +1,5 @@
 -module(test_client).
+-author("twheys@gmail.com").
 
 -compile(export_all).
 
@@ -18,13 +19,15 @@ client(Sock) ->
     inet:setopts(Sock, [{active, once}]),
     receive
 	    {tcp, Sock, Bin}  ->
-            io:format("CLIENT RECV: ~s~n", [binary_to_list(Bin)]),
+            {ok, Incoming} = read_filter(Bin, [binary]),
+            io:format("CLIENT RECV: ~s~n", [Incoming]),
             client(Sock);
 	    {tcp_closed, Sock} -> io:format("Connection closed!~n");
 
         {send, Msg} -> 
-            io:format("CLIENT SEND: ~s~n", [binary_to_list(Msg)]),
-            gen_tcp:send(Sock, Msg),
+            {ok, Outgoing} = write_filter(Msg, []),
+            io:format("CLIENT SEND: ~s~n", [binary_to_list(Outgoing)]),
+            gen_tcp:send(Sock, Outgoing),
             client(Sock);
 
         disconnect -> 
@@ -47,6 +50,32 @@ client(Sock) ->
     end.
 
 
+write_filter(Msg, [Unknown | Rest]) ->
+    logger:warn("Unknown write filter: " ++ atom_to_list(Unknown)),
+    write_filter(Msg, Rest);
+write_filter(Msg, []) ->
+    {ok, Msg}.
+
+
+read_filter(Msg, [binary | Rest]) ->
+    read_filter(binary_to_list(Msg), Rest);
+read_filter(Msg, [Unknown | Rest]) ->
+    logger:warn("Unknown read filter: " ++ atom_to_list(Unknown)),
+    read_filter(Msg, Rest);
+read_filter(Msg, []) ->
+    {ok, Msg}.
+
+quick() ->
+    Pid = test_client:start(),
+    test_client:ping(Pid),
+    timer:sleep(100),
+    test_client:get_apple(Pid),
+    timer:sleep(100),
+    test_client:encrypt(Pid),
+    timer:sleep(100),
+    test_client:authenticate(Pid, <<"timmy">>, <<"p@ss">>),
+    ok.
+
 disconnect(Pid) ->
     Pid ! disconnect.
 
@@ -63,17 +92,17 @@ send_junk(Pid) ->
     Pid ! {send, <<"}{Q#RQ{#Q}ASCa]sc[s]fva [f#}RAFVS{}Fser]w3[rfd">>}.
 
 ping(Pid) ->
-    Pid ! {send, <<"{\"action\":\"client.ping\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.ping\"}]}">>}.
 
 get_apple(Pid) ->
-    Pid ! {send, <<"{\"action\":\"client.get_apple\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.get_apple\"}]}">>}.
 
 encrypt(Pid) ->
-    Pid ! {send, <<"{\"action\":\"client.encrypt\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.encrypt\"}]}">>}.
 
 authenticate(Pid, UserName, Password) ->
     Pid ! {send, list_to_binary([
-            <<"{\"client.authenticate\":[">>,
+            <<"{\"user.authenticate\":[">>,
             <<"{\"username\":\"">>, 
             UserName, 
             <<"\"},">>,
@@ -82,13 +111,13 @@ authenticate(Pid, UserName, Password) ->
             <<"\"}]}">>
         ])}.
 
-get_rooms(Pid) ->
-    Pid ! {send, <<"{\"action\":\"client.get_rooms\"}]}">>}.
+get_nodes(Pid) ->
+    Pid ! {send, <<"{\"action\":\"server.get_nodes\"}]}">>}.
 
-get_rooms(Pid, RoomName) ->
+join_node(Pid, NodeName) ->
     Pid ! {send, list_to_binary([
-            <<"{\"client.join_room\":[">>,
-            <<"{\"room\":\"">>, 
-            RoomName, 
+            <<"{\"nodes.join_node\":[">>,
+            <<"{\"name\":\"">>, 
+            NodeName, 
             <<"\"}]}">>
         ])}.
