@@ -8,8 +8,12 @@
 
 -export([unicode_clean/1]).
 
+-export([cast/2,call/2,call/3,disc_clients/1]).
 -export([invalid_action/1,invalid_action/2,reply_to/1,reply_to/2]).
--export([json_encode/1,json_decode/1,bind_json_to_api/1,call_api/2]).
+-export([json_encode/1,json_decode/1,bind_api/1]).
+
+
+-define(DEFAULT_CALL_TIMEOUT, 1000).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -18,7 +22,7 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 get_interval_str(Secs) when Secs =< 60 -> io_lib:format("~p seconds", [trunc(Secs)]);
-get_interval_str(Secs) when Secs =< 3600 -> io_lib:format("~p minutes, ", [trunc(Secs / 60)]) ++ get_interval_str(Secs rem 60);
+get_interval_str(Secs) when Secs =< 60 * 60 -> io_lib:format("~p minutes, ", [trunc(Secs / 60)]) ++ get_interval_str(Secs rem 60);
 get_interval_str(Secs) when Secs =< 86400 -> io_lib:format("~p hours, ", [trunc(Secs / 3600)]) ++ get_interval_str(Secs rem 3600);
 get_interval_str(Secs) -> io_lib:format("~p days, ", [trunc(Secs / (86400))]) ++ get_interval_str(Secs rem (86400)).
 
@@ -76,6 +80,35 @@ hexstr_to_bin([X,Y|T], Acc) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%  core functions
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cast(Module, Msg) ->
+    logger:trace("Cast ~p : ~p", [Module, Msg]),
+    global:send(Module, Msg),
+    ok.
+call(Module, Msg) ->
+    call(Module, Msg, ?DEFAULT_CALL_TIMEOUT).
+call(Module, Msg, Timeout) ->
+    logger:trace("Sending to ~p message ~p with timeout ~p", [Module, {self(), Msg}, Timeout]),
+    Pid = global:whereis_name(Module),
+    Pid ! {self(), Msg},
+    receive
+        {Pid, Reply} -> 
+            logger:trace("Receiving response ~p", [Reply]),
+            Reply
+    after Timeout ->
+        {error, timeout}
+    end.
+disc_clients([]) ->
+    ok;
+disc_clients([Client | Clients]) ->
+    goethe:close(Client),
+    disc_clients(Clients).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
 %  module api helper functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,7 +121,7 @@ invalid_action(From, Other) ->
   {error, invalid_action}.
 
 reply_to(From) ->
-  From ! {self(), void},
+  From ! {self(), ok},
   ok.
 reply_to(From, Msg) ->
   From ! {self(), Msg},
@@ -111,35 +144,36 @@ json_decode(Bin) ->
     catch
       Reason -> {error, Reason}
     end.
+    
+bind_api(Msg) when is_list(Msg) -> bind_api([], Msg);
+bind_api(Msg) -> bind_api([], [Msg]).
 
-bind_json_to_api(
-        {[{<<"action">>,
-            Action
-        }]}) ->
-    case string:tokens(binary_to_list(Action),".") of
-      [Prefix, F] -> bind_json_to_api(Prefix, F, []);
-      _ -> {error, invalid_action_format}
-    end;
-
-bind_json_to_api(
-        {[{Action,
-            Params
-        }]}) ->
-    case string:tokens(binary_to_list(Action),".") of
-      [Prefix, F] -> bind_json_to_api(Prefix, F, Params);
-      _ -> {error, invalid_action_format}
-    end;
-bind_json_to_api([Msg | Rest]) ->
-    {ok, Action} = bind_json_to_api(Msg),
-    bind_json_to_api([Action], Rest).
-
-bind_json_to_api(Actions, []) ->
+bind_api(Actions, []) ->
     {ok, Actions};
-bind_json_to_api(Actions, [Msg | Rest]) ->
-    {ok, Action} = bind_json_to_api(Msg),
-    bind_json_to_api([Action | Actions], Rest).
+bind_api(BoundActions, [
+    {[{<<"action">>,
+        Action
+    }]}
+    | Rest]) ->
+    case string:tokens(binary_to_list(Action),".") of
+      [Prefix, F] -> 
+        {ok, BoundAction} = bind_params(Prefix, F, []),
+        bind_api([BoundAction | BoundActions], Rest);
+      _ -> {error, invalid_action_format}
+    end;
+bind_api(BoundActions, [
+    {[{Action,
+            Params
+    }]}
+    | Rest]) ->
+    case string:tokens(binary_to_list(Action),".") of
+      [Prefix, F] -> 
+        {ok, BoundAction} = bind_params(Prefix, F, Params),
+        bind_api([BoundAction | BoundActions], Rest);
+      _ -> {error, invalid_action_format}
+    end.
 
-bind_json_to_api(Prefix, F, Params) ->
+bind_params(Prefix, F, Params) ->
   ParsedParams = bind_params_to_api(Params),
   {ok, {list_to_atom(Prefix), list_to_atom(F), ParsedParams}}.
 
@@ -149,21 +183,3 @@ bind_params_to_api(Converted, []) ->
     Converted;
 bind_params_to_api(Converted, [{[{_,Value}]} | Rest]) ->
   bind_params_to_api([Value | Converted], Rest).
-
-call_api(Role, {Prefix, F, []}) ->
-  case goethe:get_module(Prefix, Role) of
-  {ok, Module} ->
-    Module:handle(F);
-  {error, Reason} -> goethe:send_error_code(self(), client, Reason)
-  end;
-call_api(Role, {Prefix, F, Params}) ->
-  case goethe:get_module(Prefix, Role) of
-  {ok, Module} -> 
-    Module:handle(F, Params);
-  {error, Reason} -> goethe:send_error_code(self(), client, Reason)
-  end;
-call_api(_, []) ->
-  ok;
-call_api(Role, [Action | Actions]) ->
-  call_api(Role, Action),
-  call_api(Role, Actions).

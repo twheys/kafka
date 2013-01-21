@@ -4,7 +4,7 @@
 -export([start/1,start_link/1]).
 
 -define(TCP_OPTIONS, [binary, {active, false}]).
--define(DEFAULT_PLAIN_TIMEOUT, 100 * 10 * 1000).
+-define(DEFAULT_PLAIN_TIMEOUT, 30 * 1000).
 -define(DEFAULT_FULLY_ENCRYPTED_TIMEOUT, 5 * 60 * 1000).
 
 -record(state, {
@@ -34,8 +34,15 @@ init(Port, TcpOptions) ->
 	    Top = self(),
 		spawn(fun()-> accept(Sock, Top) end),
         receive
-        	closed -> {ok, closed};
-        	Other -> {error, Other}
+        	stop -> 
+        		gen_tcp:close(Sock),
+        		{ok, closed};
+        	closed -> 
+        		gen_tcp:close(Sock),
+        		{ok, closed};
+        	Other -> 
+        		gen_tcp:close(Sock),
+        		{error, Other}
         end;
 	Other ->
 	    {error, Other}
@@ -48,7 +55,8 @@ accept(LSock, Top) ->
 	{ok, Sock} ->
         logger:info("Received a new connection from ~p", [Sock]),
 		spawn(fun()-> accept(LSock, Top) end),
-        goethe:greet(self()),
+		goethe:register_client(self()),
+        goethe_core:greet(self()),
         plain(#state{sock=Sock});
 	{error, closed} ->
 	    logger:fatal("Socket closed!"),
@@ -67,8 +75,11 @@ plain(#state{sock=Sock} = State) ->
 	{tcp, Sock, Bin} -> 
 	    logger:trace("Inbound: ~p", [Bin]),
 	    case read_filter(Bin, [json, binder]) of
-		{ok, Actions} -> game_util:call_api(plain, Actions);
-		{error, Reason} -> goethe:send_error_code(self(), client, Reason)
+		{ok, Actions} ->
+        	logger:debug("Actions: ~p", [Actions]),
+        	goethe:recv(plain, Actions),
+        	logger:debug("Send to game engine, back to listening!");
+		{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
 		end,
 		plain(State);
 		
@@ -91,7 +102,7 @@ plain(#state{sock=Sock} = State) ->
 		end
 	after ?DEFAULT_PLAIN_TIMEOUT ->
 		timeout(),
-		plain(Sock)
+		plain(State)
 	end.
 
 
@@ -103,8 +114,8 @@ fully_encrypted(#state{sock=Sock,key=_Key} = State) ->
 	{tcp, Sock, Bin} -> 
 	    logger:trace("Inbound: ~p", [Bin]),
 	    case read_filter(Bin, [fcrypto,json,binder]) of
-		{ok, Actions} -> game_util:call_api(fcrypto, Actions);
-		{error, Reason} -> goethe:send_error_code(self(), client, Reason)
+		{ok, Actions} -> goethe:recv(fcrypto, Actions);
+		{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
 		end,
 		fully_encrypted(State);
 		
@@ -123,7 +134,7 @@ fully_encrypted(#state{sock=Sock,key=_Key} = State) ->
 		end
 	after ?DEFAULT_FULLY_ENCRYPTED_TIMEOUT ->
 		timeout(),
-		fully_encrypted(Sock)
+		fully_encrypted(State)
 	end.
 
 
@@ -135,8 +146,8 @@ cloud(#state{sock=Sock,key=_Key} = State) ->
 	{tcp, Sock, Bin} -> 
 	    logger:trace("Inbound: ~p", [Bin]),
 	    case read_filter(Bin, [fcrypto,json,binder]) of
-		{ok, Actions} -> game_util:call_api(cloud, Actions);
-		{error, Reason} -> goethe:send_error_code(self(), client, Reason)
+		{ok, Actions} -> goethe:recv(cloud, Actions);
+		{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
 		end,
 		cloud(State);
 		
@@ -176,7 +187,7 @@ read_filter(Msg, [json | Rest]) ->
 		{error, _} -> {error, json_decode}
 	end;
 read_filter(Msg, [binder | Rest]) ->
-	case game_util:bind_json_to_api(Msg) of
+	case game_util:bind_api(Msg) of
 	{ok, Actions} -> read_filter(Actions, Rest);
 	{error, Reason} -> {error, {binder_decode, Reason}}
 	end;
@@ -189,13 +200,21 @@ read_filter(Msg, []) ->
 
 common({tcp_closed, _}, _State) ->
 		logger:debug("Client disconnected."),
-	    goethe:decrement_procs(),
+	    goethe:release_client(self()),
         {stop, tcp_closed};
-common(shutdown, _State) -> {stop, shutdown};
+common(close, _State) -> {stop, killed_by_server};
 common(timeout, _State) -> {stop, timeout};
 common(Other, _State) -> logger:warn("~p", [{except_in_lsnr, Other}]).
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  util functions
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 timeout() -> 
-	goethe:send_error_code(self(), client, timeout),
-    timer:sleep(500),
-	goethe:timeout(self()).
+	Callback = self(),
+    spawn_link(fun() ->
+	    goethe_core:send_error_code(Callback, client, timeout),
+    	goethe:timeout(Callback)
+    end).

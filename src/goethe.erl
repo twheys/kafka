@@ -39,95 +39,52 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -module(goethe).
 -author("twheys@gmail.com").
--behaviour(application).
+-behaviour(gen_server).
 
-% Application exports
--export([start/2, stop/1, startapp/0]).
+-export([start/1,start_link/1]).
 
-% constuctors
--export([new_singleton/0,new_singleton_link/0]).
--export([new_api/0,new_api_link/0]).
--export([new_socket/1,new_socket_link/1]).
+% gen_server exports
+-export([init/1,handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
 
 % public game server functions
--export([register_module/5,get_module/2,get_modules/1,increment_procs/0,decrement_procs/0]).
+-export([register_module/1,register_client/1,release_client/1,recv/2]).
 
 % public socket server functions
--export([send_msg/2,encrypt/2,cloud/1,shutdown/1,timeout/1]).
-
-% public api functions
--export([greet/1,send_error_code/3,pong/1]).
--export([handle/1,handle/2]).
+-export([send_msg/2,encrypt/2,cloud/1,close/1,timeout/1]).
+-export([get_modules/0]).
 
 -define(GAME_SERVER_NAME, game_server).
+-define(SOCKET_SERVER_NAME, socket_server).
 -define(GAME_API_NAME, game_api).
--define(DEFAULT_CALL_TIMEOUT, 1000).
 
+-record(state, {
+procs=0,modules=[],clients=[],listener
+}).
+-record(module, {
+name,emod,actions=[]
+}).
+-record(action, {
+name,efun,arity,roles
+}).
 
-startapp() -> application:start(goethe).
-
-start(_Type, StartArgs) -> goethe_sup:start_link(StartArgs).
-
-stop(_State) -> ok.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%  factories
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-new_singleton() ->
-    {ok, Pid} = goethe_singleton:start(),
-    global:register(?GAME_SERVER_NAME, Pid),
-    {ok, Pid}.
-new_singleton_link() ->
-    {ok, Pid} = goethe_singleton:start_link(),
-    global:register_name(?GAME_SERVER_NAME, Pid),
-    {ok, Pid}.
-
-new_api() -> goethe_api:start().
-new_api_link() -> goethe_api:start_link().
-
-new_socket(Port) -> goethe_socket:start(Port).
-new_socket_link(Port) -> goethe_socket:start_link(Port).
+start(Port) ->  gen_server:start({local, ?MODULE}, ?MODULE, [Port], []).
+start_link(Port) ->  gen_server:start_link({local, ?MODULE}, ?MODULE, [Port], []).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  work functions
+%  game server functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cast(Module, Msg) ->
-    logger:trace("Cast ~p : ~p", [Module, Msg]),
-    global:send(Module, Msg),
-    ok.
-call(Module, Msg) ->
-    call(Module, Msg, ?DEFAULT_CALL_TIMEOUT).
-call(Module, Msg, Timeout) ->
-    logger:trace("Call ~p : ~p with timeout ~p", [Module, {self(), Msg}, Timeout]),
-    Pid = global:whereis_name(Module),
-    Pid ! {self(), Msg},
-    receive
-        {Pid, Reply} -> 
-            logger:trace("Receiving response ~p", [Reply]),
-            Reply
-    after Timeout ->
-        {error, timeout}
-    end.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%  public game server functions
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-register_module(Identifier, Pid, Prefix, Module, Roles) ->
-    global:register_name(Identifier, Pid),
-    global:send(?GAME_SERVER_NAME, {add_module, {Prefix, Module, Roles}}).
-get_module(Prefix, Role) -> call(?GAME_SERVER_NAME, {get_module, {Prefix, Role}}).
-get_modules(Role) -> call(?GAME_SERVER_NAME, {get_modules, {Role}}).
-increment_procs() -> cast(?GAME_SERVER_NAME, increment_procs).
-decrement_procs() -> cast(?GAME_SERVER_NAME, decrement_procs).
+register_module({Name, {EMod, Actions}}) ->
+    gen_server:cast(?MODULE, {add_module, {Name, {EMod, Actions}}}).
+register_client(Client) -> gen_server:cast(?MODULE, {register_client, {Client}}).
+release_client(Client) -> gen_server:cast(?MODULE, {release_client, {Client}}).
+recv(_, []) -> ok;
+recv(Role, [Action | Rest]) -> 
+    gen_server:call(?MODULE, {recv, {Role, Action}}),
+    recv(Role, Rest).
+get_modules() -> gen_server:call(?MODULE, get_modules).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -147,8 +104,8 @@ encrypt(Pid, full) ->
 cloud(Pid) -> 
     Pid ! cloud,
     ok.
-shutdown(Pid) ->
-    Pid ! shutdown,
+close(Pid) ->
+    Pid ! close,
     ok.
 timeout(Pid) ->
     Pid ! timeout,
@@ -157,18 +114,110 @@ timeout(Pid) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  public api functions
+%  gen_server functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-greet(To) -> cast(?GAME_API_NAME, {greet, {To}}).
-send_error_code(To, Blame, Code) -> cast(?GAME_API_NAME, {send_error_code, {To, Blame, Code}}).
-pong(To) -> cast(?GAME_API_NAME, {pong, {To}}).
+init([Port]) -> 
+    process_flag(trap_exit, true),
+    Listener = goethe_socket:start_link(Port),
+    {ok, #state{listener=Listener}}.
 
-% Inbound
-handle(Msg) -> call(?GAME_API_NAME, Msg).
-% handle(ping) -> call(?GAME_API_NAME, ping);
-% handle(encrypt) -> call(?GAME_API_NAME, encrypt);
-% handle(invalid_action) -> call(?GAME_API_NAME, invalid_action);
-% handle(_) -> {error, action_mismatch}.
 
-handle(Msg, Params) -> call(?GAME_API_NAME, {Msg, Params}).
+handle_call(get_modules, _From, #state{modules=Modules} = State) ->
+    {reply, {ok, Modules}, State};
+
+%handle_call({recv, {Role, {ModuleName, ActionName, []}}}, From, #state{modules=Modules} = State) ->
+%    logger:debug("Goethe Recv from socket: ~p:~p", [ModuleName, ActionName]),
+%    {ok, {M, F}} = lookup_module(ModuleName, ActionName, 1, Role, Modules),
+%    logger:debug("Spawning worker ~p:~p(~p)", [M, F, [From]]),
+%    spawn(M, F, [From]),
+%    {reply, ok, State};
+
+handle_call({recv, {Role, {ModuleName, ActionName, Params}}}, {From, _Ref}, #state{modules=Modules} = State) ->
+    logger:debug("Goethe Recv from socket: ~p:~p", [ModuleName, ActionName]),
+    case lookup_module(ModuleName, ActionName, length(Params)+1, Role, Modules) of
+    {ok, {M, F}} ->
+        logger:debug("Spawning worker ~p:~p(~p)", [M, F, [From | Params]]),
+        spawn(M, F, [From | Params]),
+        {reply, ok, State};
+    {error, Reason} -> 
+        goethe_core:send_error_code(self(), client, Reason),
+        {reply, {error, Reason}, State}
+    end;
+
+handle_call(Request, _From, State) ->
+    logger:info("Unexpected function call in goethe: ~p", [Request]),
+    {noreply, State}.
+
+
+handle_cast({add_module, {Name, {EMod, Actions}}}, #state{modules=Modules} = State) ->
+    logger:info("Loading Module ~p", [Name]),
+    FilteredModules = lists:filter(fun(#module{name=X}) -> X =/= Name end, Modules),
+    logger:debug("Filtered list ~p", [FilteredModules]),
+    case create_module(Name, EMod, Actions) of
+    {ok, NewModule} -> 
+        logger:info("Module [~p] successfully loaded! ~p", [Name, NewModule]),
+        {noreply, State#state{modules=[NewModule | FilteredModules]}};
+    Other -> 
+        logger:warn("Failed to add module. Reason: ~p", [Other]),
+        {noreply, {error, Other}}
+    end;
+
+handle_cast({register_client, {Client}}, #state{clients=Clients,procs=Procs} = State) ->
+    NewProcs = Procs+1,
+    logger:info("New connection! Currently connected: ", [NewProcs]),
+    {noreply, State#state{procs=NewProcs,clients=[Client | Clients]}};
+
+handle_cast({release_client, {Client}}, #state{clients=Clients,procs=Procs} = State) ->
+    NewProcs = Procs-1,
+    logger:info("Connection ended! Currently connected: ", [NewProcs]),
+    FilteredClients = lists:filter(fun(X) -> X =/= Client end, Clients),
+    {noreply, State#state{procs=NewProcs,clients=FilteredClients}};
+
+handle_cast(Request, State) ->
+    logger:info("Unexpected function cast in goethe: ~p", [Request]),
+    {noreply, State}.
+
+    
+handle_info(_Info, State) -> {noreply, State}.
+terminate(_Reason, _State) -> normal.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
+
+
+create_module(Name, EMod, Actions) ->
+    logger:debug("Constructing Module ~p", [Name]),
+    create_module(Name, EMod, Actions, []).
+create_module(Name, EMod, [], MappedActions) ->
+    logger:debug("Completing Module ~p", [Name]),
+    {ok, #module{emod=EMod,actions=MappedActions,name=Name}};
+create_module(Name, EMod, [{FName, {EFun, Arity, Roles}} | Actions], MappedActions) ->
+    logger:debug("Constructing Action ~p in Module ~p", [FName, Name]),
+    create_module(Name, EMod, Actions, [
+            #action{efun=EFun, name=FName,arity=Arity,roles=Roles} | MappedActions
+    ]).
+
+lookup_module(_ModuleName, _ActionName, _Arity, _Role, []) ->
+    {error, module_not_found};
+lookup_module(ModuleName, ActionName, Arity, Role, [Candidate | Rest]) ->
+    logger:debug("Looking up Module ~p for ~p/~p[~p]", [ModuleName, ActionName, Arity, Role]),
+    logger:debug("Checking ~p", [Candidate#module.name]),
+    case ModuleName == Candidate#module.name of
+    true ->
+        case lookup_action(ActionName, Arity, Role, Candidate#module.actions) of
+        {ok, F} -> {ok, {Candidate#module.emod, F}};
+        notfound -> lookup_module(ModuleName, ActionName, Arity, Role, Rest)
+        end;
+    false -> lookup_module(ModuleName, ActionName, Arity, Role, Rest)
+    end.
+
+lookup_action(_ActionName, _Arity, _Role, []) ->
+    {error, action_not_found};
+lookup_action(ActionName, Arity, Role, [Candidate | Rest]) ->
+    logger:debug("Searching for Function ~p/~p", [ActionName, Arity]),
+    logger:debug("Checking ~p", [Candidate#action.name]),
+    case ActionName == Candidate#action.name
+        andalso Arity == Candidate#action.arity
+        andalso [Role] == [X || X <- Candidate#action.roles, X==Role] of
+    true -> {ok, Candidate#action.efun};
+    false -> lookup_action(ActionName, Arity, Role, Rest)
+    end.

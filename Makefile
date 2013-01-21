@@ -7,7 +7,7 @@ all:
 	cd src && make
 
 goethe: all
-	${ERL} -smp auto +A 64 +K true  -env ERL_MAX_ETS_TABLES 20000 -boot start_sasl -run goethe startapp -pa ebin
+	${ERL} -smp auto +A 64 +K true  -env ERL_MAX_ETS_TABLES 20000 -boot start_sasl -run goethe_app startapp -pa ebin
 
 clean:
 	rm -rf ${EBIN}/*.beam

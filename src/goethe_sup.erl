@@ -18,10 +18,8 @@ init(_Args) ->
 	[
         {logger, {logger, start_link, [?LOGFILE,?LOGLEVEL]}, 
             permanent, 5000, worker, [logger]},
-        {game_server, {goethe, new_singleton_link, []}, 
+        {game_server, {goethe, start_link, [?PORT]}, 
             permanent, 5000, worker, [goethe]},
-        {socket_server, {goethe, new_socket_link, [?PORT]},
-            permanent, 10000, worker, [goethe]},
-        {game_api, {goethe, new_api_link, []},
-            permanent, 5000, worker, [goethe]}
+        {game_api, {goethe_core, start_link, []},
+            permanent, 5000, worker, [goethe_core]}
 	]}}.
