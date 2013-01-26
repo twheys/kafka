@@ -1,18 +1,16 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%
-%%  Goethe Game Server
-%%         
-%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -module(goethe_app).
--author("twheys@gmail.com").
+
 -behaviour(application).
 
--export([startapp/0,start/2,stop/1]).
+%% Application callbacks
+-export([start/2, stop/1]).
 
-startapp() -> application:start(goethe).
+%% ===================================================================
+%% Application callbacks
+%% ===================================================================
 
-start(_Type, StartArgs) -> goethe_sup:start_link(StartArgs).
+start(_StartType, _StartArgs) ->
+    goethe_sup:start_link().
 
-stop(_State) -> goethe_sup:terminate().
+stop(_State) ->
+    ok.

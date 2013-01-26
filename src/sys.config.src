@@ -1,0 +1,9 @@
+{goethe, [
+    {app_port, 34986},
+    {db_address, "localhost"},
+    {db_port, "5432"},
+    {db_prefix, ""},
+    {db_auth, {"test", "test}},
+    {db_name, "goethe"},
+    {db_options, []}
+]}

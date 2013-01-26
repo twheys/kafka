@@ -1,0 +1,105 @@
+-module(my_module).
+-author('twheys@gmail.com').
+-behaviour(gen_server).
+
+-export([start/0,start_link/0]).
+
+% gen_server exports
+-export([init/1,handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
+
+% Module application exports
+-export([are_you_there/0]).
+% Module outbound exports
+-export([send_helloworld/1]).
+% Module inbound exports
+-export([helloworld/1]).
+
+% Module namespace - Must be an atom.
+-define(NAME, mymodule).
+
+% Module state
+-record(state, {
+}).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  module startup functions
+%    Functions required for starting and stopping the application.
+%    They do not need to be modified but can be if necessary.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+start() -> gen_server:start({local, ?MODULE}, ?MODULE, [], []).
+start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  application functions api
+%    Public API for application functions. These functions handle calls
+%    from other modules.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  outbound functions api
+%    Public API for Outbound Messages. These functions accept a session
+%    as a parameter and send some sort of message to that client.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  inbound functions api
+%	 Public API for Inbound Messages. These functions receive incoming
+%    messages directly from the client.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  gen_server functions
+%     Implementation of the Module, following the Generic Server design
+%	  pattern.
+%
+%	  init description
+%	    At this stage in development, modules need to register themselves
+%	    on startup by calling goethe:register_module/1.
+%		
+%		json_name: The name used in the json "action" that maps to this
+%		  function.
+%		erl_name: The name of the erlang function to be called.
+%		arity: The arity of the function.
+%		role requiment: A list of authentication roles that the function
+%		  is available in:
+%		  plain: Plain text connection; User is connection but not
+%		    encrypted nor authenticated.
+%		  pcrypto: User is partially encrypted.  Only incoming messages
+% 		    are encrypted.
+%		  fcrypto: User is fully encrypted.  All messages are encrypted
+% 		    but the user has not authenticated.
+%		  auth: User is authenticated and has a session. Typically this
+% 		    is the only role required in custom modules.
+%		  admin: Function is only available to admin users.
+%		  all: Function is available to everyone.  Use this role with
+% 		    care.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+init(_Args) ->
+    goethe:register_module(
+    	{?NAME, ?MODULE,
+    	{functions, [
+    		% {json_name, {erl_name, arity, [plain,pcrypto,fcrypto,auth,admin.cloud,all]}}
+    	]}}
+    ),
+    {ok, #state{}}.
+
+handle_call(_Req, _From, State) -> {noreply, State}.
+handle_cast(_Request, State) -> {noreply, State}.
+handle_info(_Info, State) -> {noreply, State}.
+terminate(_Reason, _State) -> normal.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.

@@ -1,0 +1,3 @@
+[submodule "couchdb"]
+	path = couchdb
+	url = https://github.com/benoitc/couchbeam

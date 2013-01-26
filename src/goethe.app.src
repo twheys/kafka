@@ -1,0 +1,20 @@
+{application, goethe,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {modules, [
+             goethe,
+             goethe_app,
+             goethe_sup,
+             goethe_core,
+             goethe_socket,
+             goethe_user
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { goethe_app, []}},
+  {env, []}
+ ]}.

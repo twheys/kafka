@@ -1,14 +1,13 @@
 -module(goethe_socket).
--author("twheys@gmail.com").
+-author('twheys@gmail.com').
 
 -export([start/1,start_link/1]).
 
 -define(TCP_OPTIONS, [binary, {active, false}]).
--define(DEFAULT_PLAIN_TIMEOUT, 30 * 1000).
--define(DEFAULT_FULLY_ENCRYPTED_TIMEOUT, 5 * 60 * 1000).
+-define(DEFAULT_TIMEOUT, 10 * 60 * 10000).
 
 -record(state, {
-sock,key,game
+sock,status,filters=[],session
 }).
 
 
@@ -30,7 +29,6 @@ init(Port, TcpOptions) ->
     logger:info("Initializing Socket Server on Port: ~p.", [Port]),
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Sock} ->
-	    logger:info("Login Server successfully initialized!"),
 	    Top = self(),
 		spawn(fun()-> accept(Sock, Top) end),
         receive
@@ -38,11 +36,10 @@ init(Port, TcpOptions) ->
         		gen_tcp:close(Sock),
         		{ok, closed};
         	closed -> 
-        		gen_tcp:close(Sock),
         		{ok, closed};
-        	Other -> 
+        	{error, Reason} -> 
         		gen_tcp:close(Sock),
-        		{error, Other}
+        		{error, Reason}
         end;
 	Other ->
 	    {error, Other}
@@ -56,8 +53,8 @@ accept(LSock, Top) ->
         logger:info("Received a new connection from ~p", [Sock]),
 		spawn(fun()-> accept(LSock, Top) end),
 		goethe:register_client(self()),
-        goethe_core:greet(self()),
-        plain(#state{sock=Sock});
+		Session = goethe_session:new(self(), []),
+        plain(Sock, Session);
 	{error, closed} ->
 	    logger:fatal("Socket closed!"),
 		Top ! closed;
@@ -67,107 +64,109 @@ accept(LSock, Top) ->
 	end.
 
 
-plain(#state{sock=Sock} = State) ->
-	logger:trace("Listening for read/write orders in plain mode!"),
+listen(#state{sock=Sock, status=Status, session=Session} = State) ->
+	logger:trace("Listening for read/write orders!"),
     inet:setopts(Sock, [{active, once}]),
 	receive
     % Recv tcp/ip messages
-	{tcp, Sock, Bin} -> 
-	    logger:trace("Inbound: ~p", [Bin]),
-	    case read_filter(Bin, [json, binder]) of
-		{ok, Actions} ->
-        	logger:debug("Actions: ~p", [Actions]),
-        	goethe:recv(plain, Actions),
-        	logger:debug("Send to game engine, back to listening!");
-		{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
-		end,
-		plain(State);
-		
+		{tcp, Sock, Bin} -> read({Status, {Sock, Session}}, Bin, [json]);	
     % Send tcp/ip messages
-	{write, Tuple} ->
-		{ok, Outbound} = write_filter(Tuple, [json]),
-    	logger:trace("Outbound: ~p", [Outbound]),
-		gen_tcp:send(Sock, Outbound),
-		plain(State);
-		
-    % Change state
-	fully_encrypted -> fully_encrypted(State);
-	cloud -> cloud(State);
+		{write, Tuple} -> write({Status, {Sock, Session}}, Tuple, [json]);
+    % End connection
+		{stop, Reason} -> Reason;
 	
-	% Common Handlers
-	Other ->
-		case common(Other, State) of
-			{ok, NewState} -> plain(NewState);
-			{stop, Reason} -> Reason
-		end
-	after ?DEFAULT_PLAIN_TIMEOUT ->
-		timeout(),
-		plain(State)
+	% State Handlers
+		Message -> common(Status, State, Message),
+			listen(State)
+	after ?DEFAULT_TIMEOUT ->
+		timeout(Session),
+		listen(State)
 	end.
 
 
-fully_encrypted(#state{sock=Sock,key=_Key} = State) ->
-	logger:trace("Listening for read/write orders in fully_encrypted mode!"),
-    inet:setopts(Sock, [{active, once}]),
-	receive
-    % Recv tcp/ip messages
-	{tcp, Sock, Bin} -> 
-	    logger:trace("Inbound: ~p", [Bin]),
-	    case read_filter(Bin, [fcrypto,json,binder]) of
-		{ok, Actions} -> goethe:recv(fcrypto, Actions);
-		{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
-		end,
-		fully_encrypted(State);
-		
-    % Send tcp/ip messages
-	{write, Tuple} ->
-		{ok, Outbound} = write_filter(Tuple, [json,fcrypto]),
-    	logger:trace("Outbound: ~p", [Outbound]),
-		gen_tcp:send(Sock, Outbound),
-		fully_encrypted(State);
-
-	% Common Handlers
-	Other ->
-		case common(Other, State) of
-			{ok, NewState} -> fully_encrypted(NewState);
-			{stop, Reason} -> Reason
-		end
-	after ?DEFAULT_FULLY_ENCRYPTED_TIMEOUT ->
-		timeout(),
-		fully_encrypted(State)
-	end.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  state functions
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+plain(State, partially_encrypted) -> 
+	listen(State#state{
+		status=partially_encrypted,
+		filters=[json,pcrypto]
+	});
+% REMOVEME Stubbed in to skip encrytion
+plain(State, {auth, {Principle}}) -> 
+	listen(State#state{
+		status=authenticated,
+		session=goethe_session:new(
+		self(), 
+		[
+			{principle, Principle}
+		])
+	});
+plain(State, Other) ->
+	common(Other),
+	listen(State).
 
 
-cloud(#state{sock=Sock,key=_Key} = State) ->
-	logger:trace("Listening for read/write orders in cloud mode!"),
-    inet:setopts(Sock, [{active, once}]),
-	receive
-    % Recv tcp/ip messages
-	{tcp, Sock, Bin} -> 
-	    logger:trace("Inbound: ~p", [Bin]),
-	    case read_filter(Bin, [fcrypto,json,binder]) of
-		{ok, Actions} -> goethe:recv(cloud, Actions);
-		{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
-		end,
-		cloud(State);
-		
-    % Send tcp/ip messages
-	{write, Tuple} ->
-		{ok, Outbound} = write_filter(Tuple, [json,fcrypto]),
-    	logger:trace("Outbound: ~p", [Outbound]),
-		gen_tcp:send(Sock, Outbound),
-		cloud(State);
+partially_encrypted(State, {fully_encrypted, {Key}}) -> 
+	listen(State#state{
+		status=fully_encrypted,
+		filters=[json,{fcrypto, {Key}}]
+	});
+partially_encrypted(State, Other) ->
+	common(Other),
+	listen(State).
 
-	% Common Handlers
-	Other ->
-		case common(Other, State) of
-			{ok, NewState} -> fully_encrypted(NewState);
-			{stop, Reason} -> Reason
-		end
-	end.
+
+fully_encrypted(State, {auth, {Principle}}) -> 
+	listen(State#state{
+		status=authenticated,
+		session=goethe_session:new(
+		self(), 
+		[
+			{principle, Principle}
+		])
+	});
+fully_encrypted(State, Other) ->
+	common(Other),
+	listen(State).
+
+
+authenticated(State, admin) ->
+	listen(State#state{
+		status=admin
+	});
+
+authenticated(State, Other) ->
+	common(Other),
+	listen(State).
+
+
+admin(State, Other) ->
+	common(Other),
+	listen(State).
+
+
+cloud(State, Other) ->
+	common(Other),
+	listen(State).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  util functions
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+write({FLoop, {Sock, Session}}, Tuple, Filters) ->
+	{ok, Outbound} = write_filter(Tuple, Filters),
+	logger:trace("Outbound: ~p", [Outbound]),
+	gen_tcp:send(Sock, Outbound),
+	FLoop(Sock, Session).
+
 
 write_filter(Msg, [json | Rest]) ->
-	case game_util:json_encode(Msg) of
+	case goethe_util:json_encode(Msg) of
 			{ok, JSON} ->
 				write_filter(JSON, Rest);
 			{error, Reason} -> 
@@ -181,40 +180,64 @@ write_filter(Msg, []) ->
 	{ok, Msg}.
 
 
+read(#state{status=Status,session=Session} = State, Bin, Filters) ->
+    logger:debug("Inbound: ~p", [Bin]),
+    case read_filter(Bin, Filters) of
+	{ok, Actions} ->
+    	logger:debug("Actions: ~p", [Actions]),
+    	goethe:recv(Status, Session, Actions),
+    	logger:debug("Send to game engine, back to listening!");
+	{error, Reason} -> goethe_core:send_error_code(self(), client, Reason)
+	end,
+	listen(State).
+
+	
+read_filter(Msg, []) ->
+	goethe_util:bind_api(Msg);
 read_filter(Msg, [json | Rest]) ->
-	case game_util:json_decode(Msg) of
+	case goethe_util:json_decode(Msg) of
 		{ok, JSON} -> read_filter(JSON, Rest);
 		{error, _} -> {error, json_decode}
 	end;
-read_filter(Msg, [binder | Rest]) ->
-	case game_util:bind_api(Msg) of
-	{ok, Actions} -> read_filter(Actions, Rest);
-	{error, Reason} -> {error, {binder_decode, Reason}}
-	end;
 read_filter(Msg, [Unknown | Rest]) ->
-	logger:warn("Unknown read filter: " ++ atom_to_list(Unknown)),
-	read_filter(Msg, Rest);
-read_filter(Msg, []) ->
-	{ok, Msg}.
+	logger:warn("Unknown read filter: ~p", [Unknown]),
+	read_filter(Msg, Rest).
+
+common(plain, State, Message) ->
+	plain(State, Message);
+common(partially_encrypted, State, Message) ->
+	partially_encrypted(State, Message);
+common(fully_encrypted, State, Message) ->
+	fully_encrypted(State, Message);
+common(authenticated, State, Message) ->
+	authenticated(State, Message);
+common(admin, State, Message) ->
+	admin(State, Message);
+common(cloud, State, Message) ->
+	cloud(State, Message);
+common(_, State, Message) ->
+	common(Message),
+	listen(State).
 
 
-common({tcp_closed, _}, _State) ->
+common({tcp_closed, _}) ->
 		logger:debug("Client disconnected."),
 	    goethe:release_client(self()),
-        {stop, tcp_closed};
-common(close, _State) -> {stop, killed_by_server};
-common(timeout, _State) -> {stop, timeout};
-common(Other, _State) -> logger:warn("~p", [{except_in_lsnr, Other}]).
+        self() ! {stop, tcp_closed},
+        ok;
+common(close) -> 
+		logger:debug("Server killed connection."),
+		self() ! {stop, killed_by_server},
+        ok;
+common(timeout) -> 
+		self() ! {stop, timeout},
+        ok;
+common(Other) -> logger:warn("~p", [{inv_sock_action, Other}]).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%  util functions
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-timeout() -> 
-	Callback = self(),
+timeout(Session) -> 
     spawn_link(fun() ->
-	    goethe_core:send_error_code(Callback, client, timeout),
-    	goethe:timeout(Callback)
-    end).
+	    goethe_core:send_error_code(Session, client, timeout),
+    	goethe:timeout(Session)
+    end),
+    ok.

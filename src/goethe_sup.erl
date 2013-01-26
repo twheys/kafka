@@ -1,25 +1,42 @@
+
 -module(goethe_sup).
+
 -behaviour(supervisor).
--author("twheys@gmail.com").
 
--export([start_link/1, init/1]).
+%% API
+-export([start_link/0]).
 
--define(PORT, 34986).
+%% Supervisor callbacks
+-export([init/1]).
+
+%% Helper macro for declaring children of supervisor
+-define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+
 -define(LOGFILE, "logs/goethe.log").
 -define(LOGLEVEL, trace).
 
+%% ===================================================================
+%% API functions
+%% ===================================================================
 
-start_link(Args) ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, Args).
-	
+start_link() ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+%% ===================================================================
+%% Supervisor callbacks
+%% ===================================================================
+
 init(_Args) ->
     crypto:start(),
+    Logger = ?CHILD(logger, worker),
+    Goethe = ?CHILD(goethe, worker),
+    Goethe = ?CHILD(ibrowse, worker),
+    Goethe = ?CHILD(couchbeam, worker),
+    CoreModule = ?CHILD(goethe_core, worker),
 	{ok, {{one_for_one, 3, 10},
 	[
-        {logger, {logger, start_link, [?LOGFILE,?LOGLEVEL]}, 
-            permanent, 5000, worker, [logger]},
-        {game_server, {goethe, start_link, [?PORT]}, 
-            permanent, 5000, worker, [goethe]},
-        {game_api, {goethe_core, start_link, []},
-            permanent, 5000, worker, [goethe_core]}
+        Logger,
+        Goethe,
+        CoreModule
 	]}}.
+
