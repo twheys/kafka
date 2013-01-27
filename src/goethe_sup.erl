@@ -28,10 +28,10 @@ start_link() ->
 
 init(_Args) ->
     crypto:start(),
+    %ibrowse:start(),
+    %couchbeam:start(),
     Logger = ?CHILD(logger, worker),
     Goethe = ?CHILD(goethe, worker),
-    Goethe = ?CHILD(ibrowse, worker),
-    Goethe = ?CHILD(couchbeam, worker),
     CoreModule = ?CHILD(goethe_core, worker),
 	{ok, {{one_for_one, 3, 10},
 	[

@@ -1,0 +1,108 @@
+-module(my_module).
+-author('twheys@gmail.com').
+-behaviour(goethe_module).
+
+-export([start/0,start_link/0]).
+
+% gen_server exports
+-export([init/1,handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
+
+% Module application exports
+-export([are_you_there/0]).
+% Module outbound exports
+-export([send_helloworld/1]).
+% Module inbound exports
+-export([helloworld/1]).
+
+% Module namespace - Must be an atom.
+-define(NAME, mymodule).
+
+% Include the module records
+-include("goethe.hrl").
+
+% Module state
+-record(state, {
+}).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  module startup functions
+%    Functions required for starting and stopping the application.
+%    They do not need to be modified but can be if necessary.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+start() -> goethe_module:start({local, ?MODULE}, ?MODULE, [], []).
+start_link() -> goethe_module:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  init
+%    Handles creation of a Module record and other necessary
+%  terminate
+%    Called when the application shuts down.
+%  code change
+%    Called when a code update occurs
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+init(_Args) ->
+    Module = #module{
+        name = ?NAME,
+        emod = ?MODULE,
+        inbound=[
+            % #action{
+            %    name = json_name,
+            %    efun = erl_name,
+            %    arity = >1,
+            %    roles = [plain,pcrypto,fcrypto,auth,admin.cloud,all]
+            % }
+        ]
+    },
+    {ok, Module, #state{}}.
+
+
+terminate(_Reason, _State) -> normal.
+code_change(_OldVsn, State, _Extra) -> {ok, State}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  internal api
+%    Public API for application functions. These functions handle calls
+%    from other modules.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_internal(_Req, _Session, State) -> {{error, no_match}, State}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  inbound api
+%    Public API for Inbound Messages. These functions receive incoming
+%    messages directly from the client.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_inbound(_Req, _Session, State) -> {ok, State}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  outbound api
+%    Public API for Outbound Messages. These functions accept a session
+%    as a parameter and send some sort of message to that client.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_outbound(_Req, _Session, State) -> {ok, State}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  events api
+%    Public API for Events. These functions are called when the expected
+%    event occurs, such as start up or user authentication.  Every module
+%    receives all events so it is important to leave this stub in place as
+%    a catch all.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_event(_Ev, _Session, State) -> {ok, State}.

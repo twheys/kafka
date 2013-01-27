@@ -1,7 +1,7 @@
 -module(logger).
 -behaviour(gen_event).
 
--export([start_link/2]).
+-export([start/0,start_link/0]).
 -export([init/1,handle_event/2,handle_call/2,handle_info/2,terminate/2,code_change/3]).
 
 -export([fatal/1,warn/1,info/1,debug/1,trace/1]).
@@ -11,7 +11,16 @@
 logfile,level
 }).
 
-start_link(LogFile, LogLevel) -> 
+start() ->
+    LogFile = application:get_env(log_level),
+    LogLevel = application:get_env(log_file),
+    gen_event:start({local, logger}),
+    gen_event:add_handler(logger, ?MODULE, [LogFile, LogLevel]),
+    {ok, self()}.
+
+start_link() ->
+    LogFile = application:get_env(log_level),
+    LogLevel = application:get_env(log_file),
     gen_event:start_link({local, logger}),
     gen_event:add_handler(logger, ?MODULE, [LogFile, LogLevel]),
     {ok, self()}.
@@ -67,8 +76,5 @@ handle_event({_LogLevel, Msg, Params}, #state{logfile=_Fd,level=_FilterLogLevel}
  
 handle_call(_, State) -> {ok, ok, State}.
 handle_info(_Info, State) -> ok_state(State).
-terminate(_Args, #state{logfile=Fd}) -> 
-    file:close(Fd),
-    rm_handler_state().
-
+terminate(_Args, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> ok_state(State).

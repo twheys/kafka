@@ -27,6 +27,9 @@
 % Module namespace - Must be an atom.
 -define(NAME, chat).
 
+% Include the module records
+-include("goethe.hrl").
+
 % Module state
 -record(state, {
 }).
@@ -52,7 +55,7 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 send_system(Session, Msg) ->
 	{ok, {_, To}} = Session:get(principle),
-	gen_server:handle_call(?MODULE, {outgoing, {Session, "System", To, Msg, system}}).
+	gen_server:call(?MODULE, {outgoing, {Session, "System", To, Msg, system}}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,7 +67,7 @@ send_system(Session, Msg) ->
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 send(Session, From, To, Msg, Type) ->
-	gen_server:handle_call(?MODULE, {outgoing, {Session, From, To, Msg, Type}}).
+	gen_server:call(?MODULE, {outgoing, {Session, From, To, Msg, Type}}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,7 +78,7 @@ send(Session, From, To, Msg, Type) ->
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 recv(Session, Msg) when is_list(Msg) ->
-	gen_server:handle_cast(?MODULE, {incoming, {Session, Msg}}).
+	gen_server:cast(?MODULE, {incoming, {Session, Msg}}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -106,11 +109,18 @@ recv(Session, Msg) when is_list(Msg) ->
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 init(_Args) ->
-    goethe:register_module(
-    	{?NAME, {?MODULE, [
-    		{send, {send_chat, 2, [auth]}}
-    	]}}
-    ),
+    goethe:register_module(#module{
+        name = ?NAME,
+        emod = ?MODULE,
+        actions=[
+            #action{
+                name = send,
+                efun = send_chat,
+                arity = 2,
+                roles = [auth,admin]
+            }
+        ]
+    }),
     {ok, #state{}}.
     
 
@@ -127,7 +137,7 @@ handle_call({outgoing, {Session, From, To, Msg, Type}}, _, State) ->
     ),
     {reply, ok, State};
 
-handle_call(_Req, _From, State) -> {noreply, State}.
+handle_call(_Req, _From, State) -> {reply, {error, no_match}, State}.
 
 
 handle_cast({incoming, {Session, Msg}}, State) ->

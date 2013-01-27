@@ -17,6 +17,9 @@
 % Module namespace
 -define(NAME, auth).
 
+% Include the module records
+-include("goethe.hrl").
+
 -record(state, {
 cookies=[]
 }).
@@ -37,7 +40,8 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 get_user(UserName) ->
-    gen_server:handle_call(?MODULE, {get_user, {UserName}}).
+    gen_server:call(?MODULE, {get_user, {UserName}}).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -54,9 +58,9 @@ confirm_registration(Session, UserName) ->
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 register(Session, UserName, Password, Email) ->
-    gen_server:handle_cast(?MODULE, {register, {Session, UserName, Password, Email}}).
+    gen_server:cast(?MODULE, {register, {Session, UserName, Password, Email}}).
 login(Session, UserName, Password) ->
-    gen_server:handle_cast(?MODULE, {login, {Session, UserName, Password}}).
+    gen_server:cast(?MODULE, {login, {Session, UserName, Password}}).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -65,17 +69,27 @@ login(Session, UserName, Password) ->
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 init(_Args) ->
-    logger:info("Loading User API Module."),
-    goethe:register_module(
-    	{?NAME, ?MODULE, 
-        {functions, [
-    		{register, {register, 4, [fcrypto]}},
-    		{login, {login, 3, [all]}}
-    	]}}
-    ),
+    goethe:register_module(#module{
+        name = ?NAME,
+        emod = ?MODULE,
+        actions=[
+            #action{
+                name = register,
+                efun = register,
+                arity = 4,
+                roles = [fcrypto]
+            },
+            #action{
+                name = login,
+                efun = login,
+                arity = 3,
+                roles = [fcrypto]
+            }
+        ]
+    }),
     {ok, #state{}}.
 
-handle_call(_Req, _From, State) -> {noreply, State}.
+handle_call(_Req, _From, State) -> {reply, {error, no_match}, State}.
 
 
 handle_cast({confirm_registration, {Session, UserName}}, State) ->

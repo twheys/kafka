@@ -17,6 +17,9 @@
 % Module namespace - Must be an atom.
 -define(NAME, mymodule).
 
+% Include the module records
+-include("goethe.hrl").
+
 % Module state
 -record(state, {
 }).
@@ -90,15 +93,21 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 init(_Args) ->
-    goethe:register_module(
-    	{?NAME, ?MODULE,
-    	{functions, [
-    		% {json_name, {erl_name, arity, [plain,pcrypto,fcrypto,auth,admin.cloud,all]}}
-    	]}}
-    ),
+    goethe:register_module(#module{
+        name = ?NAME,
+        emod = ?MODULE,
+        actions=[
+            %#action{
+            %    name = json_name,
+            %    efun = erl_name,
+            %    arity = >1,
+            %    roles = [plain,pcrypto,fcrypto,auth,admin.cloud,all]
+            %}
+        ]
+    }),
     {ok, #state{}}.
 
-handle_call(_Req, _From, State) -> {noreply, State}.
+handle_call(_Req, _From, State) -> {reply, {error, no_match}, State}.
 handle_cast(_Request, State) -> {noreply, State}.
 handle_info(_Info, State) -> {noreply, State}.
 terminate(_Reason, _State) -> normal.

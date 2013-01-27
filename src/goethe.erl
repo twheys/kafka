@@ -57,14 +57,10 @@
 -define(SOCKET_SERVER_NAME, socket_server).
 -define(GAME_API_NAME, game_api).
 
+-include("goethe.hrl").
+
 -record(state, {
 procs=0,listener,db,modules=[],connections=[],nodes=[]
-}).
--record(module, {
-name,emod,actions=[]
-}).
--record(action, {
-name,efun,arity,roles
 }).
 -record(node, {
 name,address,port,is_parent,next_parent
@@ -79,8 +75,8 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %  game server functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-register_module({Name, {EMod, Actions}}) ->
-    gen_server:cast(?MODULE, {register_module, {Name, {EMod, Actions}}}).
+register_module(#module{} = Module) ->
+    gen_server:cast(?MODULE, {register_module, {Module}}).
 register_node(Name, Address, Port) ->
     gen_server:call(?MODULE, {register_node, {Name, Address, Port}}).
 register_connection(Connection) -> gen_server:cast(?MODULE, {register_connection, {Connection}}).
@@ -111,12 +107,12 @@ db_add(Doc) -> gen_server:call(?MODULE, {db_add, {Doc}}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([]) -> 
     process_flag(trap_exit, true),
-    {ok, Listener} = start_socket(),
+    {ok, Port} = {ok, 12345}, %application:get_env(app_port),
+    {ok, Listener} = start_socket(Port),
     %{ok, Db} = start_db(),
-    {ok, #state{listener=Listener,db={}}}.
+    {ok, #state{listener=Listener}}.
     
-start_socket() ->
-    {ok, Port} = application:get_env(app_port),
+start_socket(Port) ->
     Listener = goethe_socket:start_link(Port),
 	logger:info("Socket Server on port ~p successfully initialized!", [Port]),
     {ok, Listener}.
@@ -186,31 +182,24 @@ handle_call({db_add, {Doc}}, _From, #state{db=Db} = State) ->
 
 handle_call(Request, _From, State) ->
     logger:info("Unexpected function call in goethe: ~p", [Request]),
-    {noreply, State}.
+    {reply, inv_call, State}.
 
 
-handle_cast({register_module, {Name, {EMod, Actions}}}, #state{modules=Modules} = State) ->
-    logger:info("Loading Module ~p", [Name]),
-    FilteredModules = lists:filter(fun(X) -> X#module.name =/= Name end, Modules),
-    logger:debug("Filtered list ~p", [FilteredModules]),
-    case create_module(Name, EMod, Actions) of
-    {ok, NewModule} -> 
-        logger:info("Module [~p] successfully loaded! ~p", [Name, NewModule]),
-        {noreply, State#state{modules=[NewModule | FilteredModules]}};
-    Other -> 
-        logger:warn("Failed to add module. Reason: ~p", [Other]),
-        {noreply, {error, Other}}
-    end;
+handle_cast({register_module, {#module{name=Name} = Module}}, #state{modules=Modules} = State) ->
+    error_logger:info_msg("Loading Module [~p].", [Name]),
+    FilteredModules = lists:filter(fun(X) -> X#module.name =/= Name end, Modules), 
+    error_logger:info_msg("Module [~p] successfully loaded! ~p", [Name, Module]),
+    {noreply, State#state{modules=[Module | FilteredModules]}};
 
 handle_cast({register_connection, {Connection}}, #state{connections=Connections,procs=Procs} = State) ->
     NewProcs = Procs+1,
     logger:info("New connection! Currently connected: ", [NewProcs]),
     {noreply, State#state{procs=NewProcs,connections=[Connection | Connections]}};
 
-handle_cast({release_connection, {Client}}, #state{connections=Connections,procs=Procs} = State) ->
+handle_cast({release_connection, {Connection}}, #state{connections=Connections,procs=Procs} = State) ->
     NewProcs = Procs-1,
     logger:info("Connection ended! Currently connected: ", [NewProcs]),
-    FilteredConnections = lists:filter(fun(X) -> X =/= Client end, Connections),
+    FilteredConnections = lists:filter(fun(X) -> X =/= Connection end, Connections),
     {noreply, State#state{procs=NewProcs,connections=FilteredConnections}};
 
 handle_cast(Request, State) ->
@@ -219,27 +208,19 @@ handle_cast(Request, State) ->
 
     
 handle_info(_Info, State) -> {noreply, State}.
-terminate(_Reason, _State) -> normal.
+terminate(Reason, #state{listener=Listener,db=_Db}) ->
+    logger:info("Received shut down hook. Reason: ~p", [Reason]),
+    logger:info("Stopping socket server."),
+    Listener ! stop,
+    ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
-
-create_module(Name, EMod, Actions) ->
-    logger:debug("Constructing Module ~p", [Name]),
-    create_module(Name, EMod, Actions, []).
-create_module(Name, EMod, [], MappedActions) ->
-    logger:debug("Completing Module ~p", [Name]),
-    {ok, #module{emod=EMod,actions=MappedActions,name=Name}};
-create_module(Name, EMod, [{FName, {EFun, Arity, Roles}} | Actions], MappedActions) ->
-    logger:debug("Constructing Action ~p in Module ~p", [FName, Name]),
-    create_module(Name, EMod, Actions, [
-            #action{efun=EFun, name=FName,arity=Arity,roles=Roles} | MappedActions
-    ]).
 
 lookup_module(_ModuleName, _ActionName, _Arity, _Role, []) ->
     {error, module_not_found};
 lookup_module(ModuleName, ActionName, Arity, Role, [Candidate | Rest]) ->
     logger:debug("Looking up Module ~p for ~p/~p[~p]", [ModuleName, ActionName, Arity, Role]),
-    logger:debug("Checking ~p", [Candidate#module.name]),
+    logger:debug("Checking [~p]", [Candidate#module.name]),
     case ModuleName == Candidate#module.name of
     true ->
         case lookup_action(ActionName, Arity, Role, Candidate#module.actions) of
@@ -260,8 +241,8 @@ lookup_node(NodeName, [Candidate | Rest]) ->
 lookup_action(_ActionName, _Arity, _Role, []) ->
     {error, action_not_found};
 lookup_action(ActionName, Arity, Role, [Candidate | Rest]) ->
-    logger:debug("Searching for Function ~p/~p", [ActionName, Arity]),
-    logger:debug("Checking ~p", [Candidate#action.name]),
+    logger:debug("Looking up Action ~p/~p", [ActionName, Arity]),
+    logger:debug("Checking [~p]", [Candidate#action.name]),
     case ActionName == Candidate#action.name
         andalso Arity == Candidate#action.arity
         andalso [Role] == [X || X <- Candidate#action.roles, X==Role]

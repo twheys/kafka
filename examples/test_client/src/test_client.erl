@@ -5,11 +5,14 @@
 
 -define(TCP_OPTIONS, [binary, {active, false}]).
 -define(ADDRESS, "localhost").
--define(PORT, 34986).
+-define(PORT, 12345).
 
 start() ->
     io:format("CLIENT connecting~n"),
     spawn_link(?MODULE, bootstrap, [?ADDRESS, ?PORT]).
+start(Port) ->
+    io:format("CLIENT connecting~n"),
+    spawn_link(?MODULE, bootstrap, [?ADDRESS, Port]).
 
 bootstrap(Address, Port) ->
     {ok, Sock} = gen_tcp:connect(Address, Port, ?TCP_OPTIONS),
@@ -92,13 +95,13 @@ send_junk(Pid) ->
     Pid ! {send, <<"}{Q#RQ{#Q}ASCa]sc[s]fva [f#}RAFVS{}Fser]w3[rfd">>}.
 
 ping(Pid) ->
-    Pid ! {send, <<"{\"action\":\"server.ping\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.ping\"}">>}.
 
 get_apple(Pid) ->
-    Pid ! {send, <<"{\"action\":\"server.get_apple\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.get_apple\"}">>}.
 
 encrypt(Pid) ->
-    Pid ! {send, <<"{\"action\":\"server.encrypt\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.encrypt\"}">>}.
 
 authenticate(Pid, UserName, Password) ->
     Pid ! {send, list_to_binary([
@@ -112,7 +115,7 @@ authenticate(Pid, UserName, Password) ->
         ])}.
 
 get_nodes(Pid) ->
-    Pid ! {send, <<"{\"action\":\"server.get_nodes\"}]}">>}.
+    Pid ! {send, <<"{\"action\":\"server.get_nodes\"}">>}.
 
 join_node(Pid, NodeName) ->
     Pid ! {send, list_to_binary([

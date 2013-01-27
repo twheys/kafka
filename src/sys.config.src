@@ -5,5 +5,7 @@
     {db_prefix, ""},
     {db_auth, {"test", "test}},
     {db_name, "goethe"},
-    {db_options, []}
+    {db_options, []},
+    {log_level, trace},
+    {log_file, "logs/goethe.log"}
 ]}

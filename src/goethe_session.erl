@@ -1,23 +1,29 @@
--module(goethe_session, [State,Listener,Properties]).
+-module(goethe_session, [Listener,Properties]).
 -author('twheys@gmail.com').
 
 % public socket server functions
--export([send_msg/1,encrypt/0,encrypt/1,authenticate/1,cloud/0,close/0,timeout/0]).
--export([get/1]).
+-export([send_msg/1,pencrypt/1,fencrypt/1,authenticate/1,cloud/0,close/0,timeout/0]).
+-export([new/1,get/1,set/2]).
 
+-record(prop, {
+principle
+}).
+
+new(Listener) -> {goethe_session,Listener,#prop{}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  public socket server functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-send_msg(Msg) -> 
+send_msg(Msg) ->
+    logger:debug("~p ! ~p", [Listener, Msg]),
     Listener ! {write, Msg},
     ok.
-encrypt() -> 
-    Listener ! partially_encrypted,
+pencrypt(PrivKey) -> 
+    Listener ! {partially_encrypted, {PrivKey}},
     ok.
-encrypt(Key) -> 
+fencrypt(Key) -> 
     Listener ! {fully_encrypted, {Key}},
     ok.
 authenticate(Principle) -> 
@@ -39,9 +45,10 @@ timeout() ->
 %  public accessor functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-get(state) -> {ok, State};
-get(Key) when is_atom(Key) ->
-	case proplists:lookup(Key) of
-	{Key, Value} -> {ok, Value};
-	none -> {error, {inv_attr, Key}}
-	end.
+get(principle) ->
+	#prop{principle=Value} = Properties,
+    {ok, Value}.
+
+set(principle, Value) ->
+    Properties#prop{principle=Value},
+    ok.
