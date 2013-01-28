@@ -17,7 +17,6 @@ new(Listener) -> {goethe_session,Listener,#prop{}}.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 send_msg(Msg) ->
-    logger:debug("~p ! ~p", [Listener, Msg]),
     Listener ! {write, Msg},
     ok.
 pencrypt(PrivKey) -> 

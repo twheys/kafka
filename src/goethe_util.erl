@@ -157,33 +157,20 @@ bind_api(BoundActions, [
     }]}
     | Rest]) ->
     case string:tokens(binary_to_list(Action),".") of
-      [Prefix, F] -> 
-        {ok, BoundAction} = bind_params(Prefix, F, []),
-        bind_api([BoundAction | BoundActions], Rest);
+      [ModuleName, ActionName] -> 
+        bind_api([{list_to_atom(ModuleName), list_to_atom(ActionName), []} | BoundActions], Rest);
       _ -> {error, invalid_action_format}
     end;
 bind_api(BoundActions, [
     {[{Action,
-            Params
+            Payload
     }]}
     | Rest]) ->
     case string:tokens(binary_to_list(Action),".") of
-      [Prefix, F] -> 
-        {ok, BoundAction} = bind_params(Prefix, F, Params),
-        bind_api([BoundAction | BoundActions], Rest);
+      [ModuleName, ActionName] -> 
+        bind_api([{list_to_atom(ModuleName), list_to_atom(ActionName), Payload} | BoundActions], Rest);
       _ -> {error, invalid_action_format}
     end.
-
-bind_params(Prefix, F, Params) ->
-  ParsedParams = bind_params_to_api(Params),
-  {ok, {list_to_atom(Prefix), list_to_atom(F), ParsedParams}}.
-
-bind_params_to_api(Params) ->
-    bind_params_to_api([], Params).
-bind_params_to_api(Converted, []) ->
-    Converted;
-bind_params_to_api(Converted, [{[{_,Value}]} | Rest]) ->
-    bind_params_to_api([Value | Converted], Rest).
 
 
 output(Msg, Params) ->

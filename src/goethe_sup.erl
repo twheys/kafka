@@ -33,10 +33,14 @@ init(_Args) ->
     Logger = ?CHILD(logger, worker),
     Goethe = ?CHILD(goethe, worker),
     CoreModule = ?CHILD(goethe_core, worker),
+    AuthModule = ?CHILD(goethe_auth, worker),
+    ChatModule = ?CHILD(goethe_chat, worker),
 	{ok, {{one_for_one, 3, 10},
 	[
         Logger,
         Goethe,
-        CoreModule
+        CoreModule,
+        AuthModule,
+        ChatModule
 	]}}.
 

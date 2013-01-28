@@ -183,7 +183,7 @@ read(Bin, Status, Session, Filters) ->
     	logger:debug("Send to game engine, back to listening!");
 	{error, Reason} -> 
     	logger:debug("Bad request from client! ~p", [Reason]),
-    	goethe_core:send_error_code(Session, client, bad_request)
+    	goethe:notify('server.client_error', {Session, client, bad_request})
 	end.
 
 	

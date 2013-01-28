@@ -47,8 +47,8 @@
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
 
 % public game server functions
--export([register_module/1,register_connection/1,register_node/3,release_connection/1]).
--export([recv/3,get_modules/0,get_nodes/0]).
+-export([register_module/1,register_connection/1,release_connection/1]).
+-export([recv/3,notify/2,get_modules/0]).
 
 % public db functions
 -export([db_find/1,db_view/2,db_update/2,db_add/1]).
@@ -62,9 +62,6 @@
 -record(state, {
 procs=0,listener,db,modules=[],connections=[],nodes=[]
 }).
--record(node, {
-name,address,port,is_parent,next_parent
-}).
 
 start() -> gen_server:start({local, ?MODULE}, ?MODULE, [], []).
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -75,18 +72,16 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %  game server functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-register_module(#module{} = Module) ->
+register_module(Module) when is_atom(Module) ->
     gen_server:cast(?MODULE, {register_module, {Module}}).
-register_node(Name, Address, Port) ->
-    gen_server:call(?MODULE, {register_node, {Name, Address, Port}}).
 register_connection(Connection) -> gen_server:cast(?MODULE, {register_connection, {Connection}}).
 release_connection(Connection) -> gen_server:cast(?MODULE, {release_connection, {Connection}}).
 recv(_, _, []) -> ok;
-recv(Status, Session, [Action | Rest]) -> 
-    gen_server:call(?MODULE, {recv, {Status, Session, Action}}),
-    recv(Status, Session, Rest).
+recv(Role, Session, [{Module, Action, Data} | Rest]) -> 
+    gen_server:call(?MODULE, {recv, {Role, {Module, Action, Data}, Session}}),
+    recv(Role, Session, Rest).
+notify(EventName, Data) -> gen_server:cast(?MODULE, {notify, {EventName, Data}}).
 get_modules() -> gen_server:call(?MODULE, get_modules).
-get_nodes() -> gen_server:call(?MODULE, get_nodes).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -135,31 +130,11 @@ handle_call(get_modules, _From, #state{modules=Modules} = State) ->
     logger:trace("Get modules request"),
     {reply, {ok, Modules}, State};
 
-handle_call({get_node, {Name}}, _From, #state{nodes=Nodes} = State) ->
-    logger:trace("Get nodes request"),
-    {reply, lookup_node(Name, Nodes), State};
-
-handle_call(get_nodes, _From, #state{nodes=Nodes} = State) ->
-    logger:trace("Get nodes request"),
-    {reply, {ok, Nodes}, State};
-
-handle_call({register_node, {Name, Address, Port}}, _From, #state{nodes=Nodes} = State) ->
-    logger:info("Registering new node ~p", [Name]),
-    FilteredNodes = lists:filter(fun(X) -> X#node.name =/= Name end, Name),
-    NewNode = #node{name=Name,address=Address,port=Port},
-    {reply, {ok, Nodes}, State#state{nodes=[NewNode | FilteredNodes]}}; 
-
-handle_call({recv, {Status, Session, {ModuleName, ActionName, Params}}}, {From, _Ref}, #state{modules=Modules} = State) ->
-    logger:debug("Goethe Recv from socket: ~p:~p", [ModuleName, ActionName]),
-    case lookup_module(ModuleName, ActionName, length(Params)+1, Status, Modules) of
-    {ok, {M, F}} ->
-        logger:debug("Spawning worker ~p:~p(~p)", [M, F, [From | Params]]),
-        spawn(M, F, [Session | Params]),
-        {reply, ok, State};
-    {error, Reason} -> 
-        goethe_core:send_error_code(self(), client, Reason),
-        {reply, {error, Reason}, State}
-    end;
+handle_call({recv, {Role, {Module, Action, Data}, Session}}, _From, #state{modules=_Modules} = State) ->
+    % TODO check if Module is loaded.
+    logger:debug("Goethe Recv from socket: ~p:~p[~p]", [Module, Action, Data]),
+    spawn(goethe_module, inbound, [Module, Role, {Action, Data}, Session]),
+    {reply, ok, State};    
 
 handle_call({db_get, {Id}}, _From, #state{db=Db} = State) ->
     logger:trace("DB get ID#~p", [Id]),
@@ -185,22 +160,27 @@ handle_call(Request, _From, State) ->
     {reply, inv_call, State}.
 
 
-handle_cast({register_module, {#module{name=Name} = Module}}, #state{modules=Modules} = State) ->
-    error_logger:info_msg("Loading Module [~p].", [Name]),
-    FilteredModules = lists:filter(fun(X) -> X#module.name =/= Name end, Modules), 
-    error_logger:info_msg("Module [~p] successfully loaded! ~p", [Name, Module]),
+handle_cast({register_module, {Module}}, #state{modules=Modules} = State) ->
+    error_logger:info_msg("Loading Module [~p].", [Module]),
+    FilteredModules = lists:filter(fun(X) -> X =/= Module end, Modules), 
+    error_logger:info_msg("Module [~p] successfully loaded!", [Module]),
     {noreply, State#state{modules=[Module | FilteredModules]}};
 
 handle_cast({register_connection, {Connection}}, #state{connections=Connections,procs=Procs} = State) ->
     NewProcs = Procs+1,
-    logger:info("New connection! Currently connected: ", [NewProcs]),
+    logger:info("Client connected! Currently connected: ", [NewProcs]),
     {noreply, State#state{procs=NewProcs,connections=[Connection | Connections]}};
 
 handle_cast({release_connection, {Connection}}, #state{connections=Connections,procs=Procs} = State) ->
     NewProcs = Procs-1,
-    logger:info("Connection ended! Currently connected: ", [NewProcs]),
+    logger:info("Client disconnected! Currently connected: ", [NewProcs]),
     FilteredConnections = lists:filter(fun(X) -> X =/= Connection end, Connections),
     {noreply, State#state{procs=NewProcs,connections=FilteredConnections}};
+    
+handle_cast({notify, {EventName, Data}}, #state{modules=Modules} = State) ->
+    F = fun(Module) -> goethe_module:notify(Module, EventName, Data) end,
+    spawn(lists, foreach, [F, Modules]),
+    {noreply, State};
 
 handle_cast(Request, State) ->
     logger:info("Unexpected function cast in goethe: ~p", [Request]),
@@ -214,39 +194,3 @@ terminate(Reason, #state{listener=Listener,db=_Db}) ->
     Listener ! stop,
     ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
-
-
-lookup_module(_ModuleName, _ActionName, _Arity, _Role, []) ->
-    {error, module_not_found};
-lookup_module(ModuleName, ActionName, Arity, Role, [Candidate | Rest]) ->
-    logger:debug("Looking up Module ~p for ~p/~p[~p]", [ModuleName, ActionName, Arity, Role]),
-    logger:debug("Checking [~p]", [Candidate#module.name]),
-    case ModuleName == Candidate#module.name of
-    true ->
-        case lookup_action(ActionName, Arity, Role, Candidate#module.actions) of
-        {ok, F} -> {ok, {Candidate#module.emod, F}};
-        notfound -> lookup_module(ModuleName, ActionName, Arity, Role, Rest)
-        end;
-    false -> lookup_module(ModuleName, ActionName, Arity, Role, Rest)
-    end.
-
-lookup_node(NodeName, []) ->
-    {error, {node_not_found, {NodeName}}};
-lookup_node(NodeName, [Candidate | Rest]) ->
-    case NodeName == Candidate#node.name of
-    true -> {ok, Candidate};
-    false -> lookup_node(NodeName, Rest)
-    end.
-
-lookup_action(_ActionName, _Arity, _Role, []) ->
-    {error, action_not_found};
-lookup_action(ActionName, Arity, Role, [Candidate | Rest]) ->
-    logger:debug("Looking up Action ~p/~p", [ActionName, Arity]),
-    logger:debug("Checking [~p]", [Candidate#action.name]),
-    case ActionName == Candidate#action.name
-        andalso Arity == Candidate#action.arity
-        andalso [Role] == [X || X <- Candidate#action.roles, X==Role]
-        orelse [all] == Candidate#action.roles of
-    true -> {ok, Candidate#action.efun};
-    false -> lookup_action(ActionName, Arity, Role, Rest)
-    end.
