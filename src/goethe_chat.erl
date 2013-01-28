@@ -88,7 +88,7 @@ handle_internal(_Request, _State) -> no_match.
 %    messages directly from the client.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_inbound(Role, receive_msg, [
+handle_inbound(Role, chat, [
             {[{<<"msg">>,Msg}]}
         ], Session, State) when auth == Role; admin == Role ->
 	{ok, {_, From}} = Session:get(principle),
@@ -111,13 +111,18 @@ handle_inbound(_Role, _Action, _Data, _Session, _State) -> no_match.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handle_event('chat.deliver_msg', {Session, From, To, Type, Msg}, State) ->
+    {_, _, IsAdmin} = Session:get(principle),
 	Session:send_msg(
         {[{<<"chat.deliver">>,
             [
-            {[{<<"from">>,list_to_binary(From)}]},
-            {[{<<"to">>,list_to_binary(To)}]},
-            {[{<<"type">>,atom_to_binary(Type, utf8)}]},
-            {[{<<"msg">>,list_to_binary(Msg)}]}
+                {[{<<"from">>,list_to_binary(From)}]},
+                {[{<<"to">>,list_to_binary(To)}]},
+                {[{<<"type">>,atom_to_binary(Type, utf8)}]},
+                {[{<<"msg">>,list_to_binary(Msg)}]}
+                | case IsAdmin of
+                    true -> [{[{<<"msg">>,list_to_binary(Msg)}]}];
+                    _ -> []
+                  end
             ]
         }]}
     ),

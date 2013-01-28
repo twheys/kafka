@@ -105,9 +105,9 @@ plain(State, partially_encrypted) ->
 	});
 % REMOVEME Stubbed in to skip encrytion
 plain(#state{session=Session} = State, {auth, {Principle}}) ->
-	Session:set(principle, Principle),
 	listen(State#state{
-		status=authenticated
+		status=authenticated,
+		session=Session:set(principle, Principle)
 	});
 plain(_, Other) ->
 	common(Other).
@@ -123,9 +123,9 @@ partially_encrypted(_, Other) ->
 
 
 fully_encrypted(#state{session=Session} = State, {auth, {Principle}}) ->
-	Session:set(principle, Principle),
 	listen(State#state{
-		status=authenticated
+		status=authenticated,
+		session=Session:set(principle, Principle)
 	});
 fully_encrypted(_, Other) ->
 	common(Other).

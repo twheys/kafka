@@ -140,11 +140,13 @@ json_encode(Tuple) ->
       Reason -> {error, Reason}
     end.
 
-json_decode(Bin) ->
+json_decode(Bin) when is_binary(Bin) ->
     try {ok, ejson:decode(Bin)}
     catch
       Reason -> {error, Reason}
-    end.
+    end;
+json_decode([Json | Rest]) ->
+    [json_decode(Json) | json_decode(Rest)].
     
 bind_api(Msg) when is_list(Msg) -> bind_api([], Msg);
 bind_api(Msg) -> bind_api([], [Msg]).

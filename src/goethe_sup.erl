@@ -10,7 +10,7 @@
 -export([init/1]).
 
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+-define(CHILD(I, Type, Args), {I, {I, start_link, Args}, permanent, 5000, Type, [I]}).
 
 -define(LOGFILE, "logs/goethe.log").
 -define(LOGLEVEL, trace).
@@ -27,14 +27,11 @@ start_link() ->
 %% ===================================================================
 
 init(_Args) ->
-    crypto:start(),
-    %ibrowse:start(),
-    %couchbeam:start(),
-    Logger = ?CHILD(logger, worker),
-    Goethe = ?CHILD(goethe, worker),
-    CoreModule = ?CHILD(goethe_core, worker),
-    AuthModule = ?CHILD(goethe_auth, worker),
-    ChatModule = ?CHILD(goethe_chat, worker),
+    Logger = ?CHILD(logger, worker, []),
+    Goethe = ?CHILD(goethe, worker, []),
+    CoreModule = ?CHILD(goethe_core, worker, []),
+    AuthModule = ?CHILD(goethe_auth, worker, []),
+    ChatModule = ?CHILD(goethe_chat, worker, []),
 	{ok, {{one_for_one, 3, 10},
 	[
         Logger,

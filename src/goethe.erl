@@ -74,8 +74,10 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 register_module(Module) when is_atom(Module) ->
     gen_server:cast(?MODULE, {register_module, {Module}}).
-register_connection(Connection) -> gen_server:cast(?MODULE, {register_connection, {Connection}}).
-release_connection(Connection) -> gen_server:cast(?MODULE, {release_connection, {Connection}}).
+register_connection(Connection) when is_pid(Connection) ->
+    gen_server:cast(?MODULE, {register_connection, {Connection}}).
+release_connection(Connection) when is_pid(Connection) ->
+    gen_server:cast(?MODULE, {release_connection, {Connection}}).
 recv(_, _, []) -> ok;
 recv(Role, Session, [{Module, Action, Data} | Rest]) -> 
     gen_server:call(?MODULE, {recv, {Role, {Module, Action, Data}, Session}}),
@@ -102,28 +104,23 @@ db_add(Doc) -> gen_server:call(?MODULE, {db_add, {Doc}}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([]) -> 
     process_flag(trap_exit, true),
-    {ok, Port} = {ok, 12345}, %application:get_env(app_port),
-    {ok, Listener} = start_socket(Port),
-    %{ok, Db} = start_db(),
-    {ok, #state{listener=Listener}}.
+    {ok, Listener} = start_socket(),
+    {ok, Db} = start_db(),
+    {ok, #state{listener=Listener,db=Db}}.
     
-start_socket(Port) ->
+start_socket() ->
+    {ok, {Port}} = application:get_env(app_port),
     Listener = goethe_socket:start_link(Port),
 	logger:info("Socket Server on port ~p successfully initialized!", [Port]),
     {ok, Listener}.
-%start_db() ->
-%    {ok, Host} = application:get_env(db_address),
-%    {ok, Port} = application:get_env(db_port),
-%    {ok, Prefix} = application:get_env(db_prefix),
-%    {ok, {UserName, Password} = application:get_env(db_auth),
-%    Auth = [{basic_auth, {UserName, Password}}],
-%    S = couchbeam:server_connection(Host, Port, Prefix, Auth),
-%    {ok, DbName} = application:get_env(db_name),
-%    {ok, DbOptions} = application:get_env(db_options),
-%    {ok, Db} = couchbeam:open_db(S, DbName, DbOptions),
-%    {ok, Version} = couchbeam:server_info(S),
-%	logger:info("Database connection successfully initialized! Version: ~p", [Version]),
-%    {ok, Db}.
+start_db() ->
+    {ok, {Host, Port, Prefix, Options}} = application:get_env(dbs),
+    S = couchbeam:server_connection(Host, Port, Prefix, Options),
+    {ok, {DbName, DbOptions}} = application:get_env(db),
+    {ok, Db} = couchbeam:open_db(S, DbName, DbOptions),
+    {ok, Version} = couchbeam:server_info(S),
+	logger:info("Database connection successfully initialized! Version: ~p", [Version]),
+    {ok, Db}.
 
 
 handle_call(get_modules, _From, #state{modules=Modules} = State) ->

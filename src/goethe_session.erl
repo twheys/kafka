@@ -1,15 +1,12 @@
--module(goethe_session, [Listener,Properties]).
+-module(goethe_session, [Listener,Principle]).
 -author('twheys@gmail.com').
 
 % public socket server functions
 -export([send_msg/1,pencrypt/1,fencrypt/1,authenticate/1,cloud/0,close/0,timeout/0]).
 -export([new/1,get/1,set/2]).
 
--record(prop, {
-principle
-}).
 
-new(Listener) -> {goethe_session,Listener,#prop{}}.
+new(NewListener) -> {goethe_session,NewListener,{}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -25,8 +22,8 @@ pencrypt(PrivKey) ->
 fencrypt(Key) -> 
     Listener ! {fully_encrypted, {Key}},
     ok.
-authenticate(Principle) -> 
-    Listener ! {auth, {Principle}},
+authenticate(NewPrinciple) -> 
+    Listener ! {auth, {NewPrinciple}},
     ok.
 cloud() -> 
     Listener ! cloud,
@@ -44,10 +41,7 @@ timeout() ->
 %  public accessor functions
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-get(principle) ->
-	#prop{principle=Value} = Properties,
-    {ok, Value}.
+get(principle) -> {ok, Principle}.
 
-set(principle, Value) ->
-    Properties#prop{principle=Value},
-    ok.
+set(principle, NewPrinciple) ->
+    {goethe_session,Listener,NewPrinciple}.

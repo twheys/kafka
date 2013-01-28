@@ -11,6 +11,9 @@
 
 startapp() ->
     application:load(couchbeam),
+	application:start(sasl),
+	application:start(ibrowse),
+	application:start(couchbeam),
     application:start(goethe).
 stopapp() ->
 	application:stop(goethe).

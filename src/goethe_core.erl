@@ -70,10 +70,9 @@ handle_internal(_Request, _State) -> no_match.
 %    messages directly from the client.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_inbound(plain, hello, [], Session, #state{privkey=PrivKey} = State) ->
+handle_inbound(plain, hello, [], Session, State) ->
     logger:info("Received greeting from client"),
     goethe:notify('server.client_hello', {Session}),
-    Session:pencrypt(PrivKey),
     {ok, State};
     
 handle_inbound(_, ping, [], Session, State) ->
@@ -98,15 +97,16 @@ handle_inbound(_Role, _Action, _Data, _Session, _State) -> no_match.
 %    event occurs, such as start up or user authentication.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-handle_event('server.client_hello', {Session}, #state{pubkey=PubKey} = State) -> 
+handle_event('server.client_hello', {Session}, #state{privkey=PrivKey,pubkey=PubKey} = State) -> 
     Session:send_msg(
         {[{<<"server.welcome">>,
             [
             {[{<<"msg">>,<<"Welcome to Goethe! Please encrypt...">>}]},
-            {[{<<"pubkey">>,PubKey}]}
+            {[{<<"pubkey">>,list_to_binary(PubKey)}]}
             ]
         }]}
     ),
+    Session:pencrypt(PrivKey),
     {ok, State};
     
 handle_event('server.client_error', {Session, Blame, Code}, State) ->
