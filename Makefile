@@ -21,6 +21,7 @@ node: compile
 
 generate:
 	rebar generate
+	cd rel; tar -cvf ../goethe.tar goethe
 
 clean:
 	rm -f ebin/*

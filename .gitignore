@@ -3,6 +3,9 @@
 ebin/*
 deps/*
 examples/*/ebin/*
+rel/goethe
+goethe.tar
+goethe.tar.gz
 
 # Logs and databases #
 #######################
