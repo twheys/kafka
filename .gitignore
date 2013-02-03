@@ -1,9 +1,10 @@
 # Compiled source #
 ###################
-ebin/*
+apps/*/ebin/*
 deps/*
 examples/*/ebin/*
 rel/goethe
+build/
 goethe.tar
 goethe.tar.gz
 

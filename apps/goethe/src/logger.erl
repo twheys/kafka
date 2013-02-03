@@ -1,4 +1,5 @@
 -module(logger).
+-author('Tim Heys twheys@gmail.com').
 -behaviour(gen_event).
 
 -export([start/0,start_link/0]).

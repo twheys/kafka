@@ -1,5 +1,5 @@
 -module(goethe_socket).
--author('twheys@gmail.com').
+-author('Tim Heys twheys@gmail.com').
 
 -export([start/1,start_link/1]).
 
@@ -11,22 +11,21 @@ sock,session,status,filters=[]
 }).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  constructors
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 start(Port) -> spawn(fun() -> init(Port, ?TCP_OPTIONS) end).
 start_link(Port) -> spawn_link(fun() -> init(Port, ?TCP_OPTIONS) end).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  work functions
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+%%==========================================================================	
 init(Port, TcpOptions) ->
-    logger:info("Initializing Socket Server on Port: ~p.", [Port]),
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Sock} ->
 	    Top = self(),
@@ -63,7 +62,7 @@ accept(LSock, Top) ->
 			sock=Sock,
 			session=Session,
 			status=plain,
-			filters=[json,pcrypto]
+			filters=[json,pencrypt]
 		});
 	{error, closed} ->
 	    logger:fatal("Socket closed!"),
@@ -83,7 +82,9 @@ listen(#state{sock=Sock, status=Status, filters=Filters, session=Session} = Stat
     % Send tcp/ip messages
 		{write, Tuple} -> write(Tuple, Sock, Filters);
     % End connection
-		{stop, Reason} -> exit(stopped, Reason);
+		{stop, Reason} ->
+			Session:delete(),
+			exit(stopped, Reason);
 	
 	% State Handlers
 		Message -> common(Status, State, Message)
@@ -93,50 +94,49 @@ listen(#state{sock=Sock, status=Status, filters=Filters, session=Session} = Stat
 	listen(State).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  state functions
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-plain(State, partially_encrypted) ->
+%%==========================================================================
+plain(State, {pencrypt, {PrivKey}}) ->
 	listen(State#state{
-		status=partially_encrypted,
-		filters=[json,pcrypto]
-	});
-% REMOVEME Stubbed in to skip encrytion
-plain(#state{session=Session} = State, {auth, {Principle}}) ->
-	listen(State#state{
-		status=authenticated,
-		session=Session:set(principle, Principle)
+		status=pencrypt,
+		filters=[json,{pencrypt, {PrivKey}}]
 	});
 plain(_, Other) ->
 	common(Other).
 
 
-partially_encrypted(State, {fully_encrypted, {Key}}) ->
+pencrypt(State, {fencrypt, {Key}}) ->
 	listen(State#state{
-		status=fully_encrypted,
-		filters=[json,{fcrypto, {Key}}]
+		status=fencrypt,
+		filters=[json,{fencrypt, {Key}}]
 	});
-partially_encrypted(_, Other) ->
+pencrypt(_, Other) ->
 	common(Other).
 
 
-fully_encrypted(#state{session=Session} = State, {auth, {Principle}}) ->
+fencrypt(#state{session=Session} = State, {auth, {Principle}}) ->
+	NewSession = Session:set(principle, Principle),
+	NewSession:save(),
 	listen(State#state{
-		status=authenticated,
-		session=Session:set(principle, Principle)
+		status=auth,
+		session=NewSession
 	});
-fully_encrypted(_, Other) ->
+fencrypt(#state{session=Session} = State, {admin, {Principle}}) ->
+	NewSession = Session:set(principle, Principle),
+	logger:info("Admin logging in: ~p", Principle),
+	NewSession:save(),
+	listen(State#state{
+		status=admin,
+		session=NewSession
+	});
+fencrypt(_, Other) ->
 	common(Other).
 
 
-authenticated(State, admin) ->
-	listen(State#state{
-		status=admin
-	});
-
-authenticated(_, Other) ->
+auth(_, Other) ->
 	common(Other).
 
 
@@ -148,11 +148,11 @@ cloud(_, Other) ->
 	common(Other).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  util functions
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 write(Tuple, Sock, Filters) ->
 	{ok, Outbound} = write_filter(Tuple, Filters),
 	logger:trace("Outbound: ~p", [Outbound]),
@@ -168,7 +168,7 @@ write_filter(Msg, [json | Rest]) ->
 				error(Reason)
 	end;
 write_filter(Msg, [Unknown | Rest]) ->
-	logger:warn("Unknown write filter: " ++ atom_to_list(Unknown)),
+	logger:warn("Unknown write filter: ~p", [Unknown]),
 	write_filter(Msg, Rest);
 write_filter(Msg, []) ->
 	{ok, Msg}.
@@ -178,12 +178,10 @@ read(Bin, Status, Session, Filters) ->
     logger:debug("Inbound [~p]: ~p", [Status, Bin]),
     case read_filter(Bin, Filters) of
 	{ok, Actions} ->
-    	logger:debug("Actions: ~p", [Actions]),
-    	goethe:recv(Status, Session, Actions),
-    	logger:debug("Send to game engine, back to listening!");
+    	goethe:recv(Status, Session, Actions);
 	{error, Reason} -> 
     	logger:debug("Bad request from client! ~p", [Reason]),
-    	goethe:notify('server.client_error', {Session, client, bad_request})
+        goethe:nack(Session, <<"unknown">>, <<"bad_request">>)
 	end.
 
 	
@@ -191,7 +189,8 @@ read_filter(Msg, []) ->
 	goethe_util:bind_api(Msg);
 read_filter(Msg, [json | Rest]) ->
 	case goethe_util:json_decode(Msg) of
-		{ok, JSON} -> read_filter(JSON, Rest);
+		{ok, JSON} ->
+			read_filter(JSON, Rest);
 		{error, _} -> {error, json_decode}
 	end;
 read_filter(Msg, [Unknown | Rest]) ->
@@ -200,12 +199,12 @@ read_filter(Msg, [Unknown | Rest]) ->
 
 common(plain, State, Message) ->
 	plain(State, Message);
-common(partially_encrypted, State, Message) ->
-	partially_encrypted(State, Message);
-common(fully_encrypted, State, Message) ->
-	fully_encrypted(State, Message);
-common(authenticated, State, Message) ->
-	authenticated(State, Message);
+common(pencrypt, State, Message) ->
+	pencrypt(State, Message);
+common(fencrypt, State, Message) ->
+	fencrypt(State, Message);
+common(auth, State, Message) ->
+	auth(State, Message);
 common(admin, State, Message) ->
 	admin(State, Message);
 common(cloud, State, Message) ->
@@ -216,7 +215,7 @@ common(_, _, Message) ->
 
 common({tcp_closed, _}) ->
 	logger:debug("Client disconnected."),
-    goethe:release_client(self()),
+    goethe:release_connection(self()),
     self() ! {stop, tcp_closed},
     ok;
 common(close) -> 
@@ -233,7 +232,7 @@ common(Other) ->
 
 timeout(Session) -> 
     spawn_link(fun() ->
-	    goethe_core:send_error_code(Session, client, timeout),
+	    goethe_core:warn_timeout(Session),
     	goethe:timeout(Session)
     end),
     ok.

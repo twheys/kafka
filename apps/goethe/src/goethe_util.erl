@@ -1,4 +1,5 @@
 -module(goethe_util).
+-author('Tim Heys twheys@gmail.com').
 
 -export([bin_to_hexstr/1,hexstr_to_bin/1]).
 
@@ -160,7 +161,7 @@ bind_api(BoundActions, [
     | Rest]) ->
     case string:tokens(binary_to_list(Action),".") of
       [ModuleName, ActionName] -> 
-        bind_api([{list_to_atom(ModuleName), list_to_atom(ActionName), []} | BoundActions], Rest);
+        bind_api([{list_to_atom(ModuleName), list_to_atom(ActionName), {}} | BoundActions], Rest);
       _ -> {error, invalid_action_format}
     end;
 bind_api(BoundActions, [

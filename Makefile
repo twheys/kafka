@@ -1,3 +1,4 @@
+
 ERL=erl
 EBIN=./ebin
 
@@ -19,9 +20,26 @@ node: compile
 	cd rel/; rebar create-node nodeid=goethe 
 	echo '{sub_dirs, ["rel"]}.' > rebar.config
 
-generate:
+generate: clean-rel
 	rebar generate
-	cd rel; tar -cvf ../goethe.tar goethe
+	cd rel; tar -cvf goethe.tar goethe
 
-clean:
-	rm -f ebin/*
+start: generate
+	sudo chmod aog+x rel/goethe/bin/*
+	sudo chmod aog+x rel/goethe/erts-5.9/bin/*
+	sh rel/goethe/bin/goethe start
+
+console: generate
+	sudo chmod aog+x rel/goethe/bin/*
+	sudo chmod aog+x rel/goethe/erts-5.9/bin/*
+	sh rel/goethe/bin/goethe console
+	
+work-clean:
+	sudo rm -rf /server/*
+
+work: work-clean generate
+	sudo cp rel/goethe.tar /server/
+	cd /server; sudo tar xvf goethe.tar; sudo chmod aog+x goethe/bin/*; sudo chmod aog+x goethe/erts-5.9/bin/*; sh goethe/bin/goethe console
+
+clean-rel:
+	rm -rf rel/goethe

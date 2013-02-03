@@ -1,16 +1,19 @@
 {application, goethe,
  [
   {description, "Goethe Socket Server"},
-  {vsn, "1"},
-  {modules, [
-             goethe
-            ]},
+  {vsn, "0.0.1"},
+  {modules, []},
   {registered, [
     goethe_sup
   ]},
-  {applications, [sasl, kernel, stdlib, couchbeam, ibrowse, ejson, jiffy, oauth, proper]},
+  {applications, [sasl, kernel, stdlib]},
   {mod, { goethe_app, []}},
   {env, [
+    {modules, [
+             goethe_core,
+             {goethe_auth, []},
+             {goethe_chat, []}
+            ]},
     {app_port, {31863}},
     {dbs, {"127.0.0.1", 5984, "", [{auth, {"", ""}}]}},
     {db, {"goethe", []}}

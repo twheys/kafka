@@ -1,5 +1,5 @@
-
 -module(goethe_sup).
+-author('Tim Heys twheys@gmail.com').
 
 -behaviour(supervisor).
 
@@ -29,15 +29,22 @@ start_link() ->
 init(_Args) ->
     Logger = ?CHILD(logger, worker, []),
     Goethe = ?CHILD(goethe, worker, []),
-    CoreModule = ?CHILD(goethe_core, worker, []),
-    AuthModule = ?CHILD(goethe_auth, worker, []),
-    ChatModule = ?CHILD(goethe_chat, worker, []),
+    CouchUUIDS = ?CHILD(couchbeam_uuids, worker, []),
+    {ok, Modules} = application:get_env(modules),
+    {ok, Children} = include(Modules),
 	{ok, {{one_for_one, 3, 10},
 	[
         Logger,
         Goethe,
-        CoreModule,
-        AuthModule,
-        ChatModule
+        CouchUUIDS
+        | Children
 	]}}.
 
+include(Modules) ->
+    include([], Modules).
+include(Acc, []) ->
+    {ok, lists:reverse(Acc)};
+include(Acc, [{Module, Args} | Rest]) ->
+    include([?CHILD(Module, worker, Args) | Acc], Rest);
+include(Acc, [Module | Rest]) ->
+    include([?CHILD(Module, worker, []) | Acc], Rest).

@@ -1,4 +1,5 @@
 -module(goethe_module).
+-author('Tim Heys twheys@gmail.com').
 -behavior(gen_server).
 
 -export([start/4,start_link/4]).
@@ -14,11 +15,15 @@ name,mod,deps=[],nstate
 }).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  API
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
+-type principle() :: {goethe_principle, Email :: string(), UserName :: string(), IsAdmin :: boolean()}.
+-type session() :: {goethe_session, Listener :: pid(), Principle :: principle() | {}}.
+-type role() :: 'plain' | 'pencrypt' | 'fencrypt' | 'auth' | 'admin' | 'cloud'.
+
 -callback init(Args :: term()) ->
     {ok, State :: term()} | 
     {ok, State :: term(), timeout() | hibernate} |
@@ -36,9 +41,9 @@ name,mod,deps=[],nstate
     no_match.
 -callback handle_inbound(
         Action :: atom(),
-        Role:: atom(),
+        Role:: role(),
         Data:: term(),
-        Session :: {goethe_session,pid(),Tag :: term()},
+        Session :: session(),
         State :: term()) ->
     {ok, NewState :: term()} |
     {ok, NewState :: term(), timeout() | hibernate} |
@@ -52,7 +57,7 @@ name,mod,deps=[],nstate
     {ok, NewState :: term(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: term()} |
     no_match.
--callback get_api(Role:: atom()) ->
+-callback get_api(Role:: role()) ->
     {ok, Api :: term()}.
 -callback terminate(Reason :: (normal | shutdown | {shutdown, term()} |
                                term()),
@@ -63,37 +68,57 @@ name,mod,deps=[],nstate
     {ok, NewState :: term()} | {error, Reason :: term()}.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  exported functions
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% @spec internal(Name :: Action :: atom(), Data :: term(), Session :: {goethe_session,pid(),Tag :: term()})
+%%==========================================================================
+% @spec inbound(
+%       Name :: string(),
+%       Request :: {atom(), term()}) -> ok.
 % @doc 
-internal(Name, Request) -> gen_server:call(Name, {internal, {Request}}).
+internal(Name, Request) ->
+    gen_server:call(Name, {internal, {Request}}).
 
-% @spec inbound(Action :: atom(), Data :: term(), Session :: {goethe_session,pid(),Tag :: term()})
+-spec inbound(
+    Name :: string() | atom(),
+    Role :: role(),
+    {Action :: atom(),
+        Data :: term()},
+    Session :: session()) -> ok.
 % @doc 
-inbound(Name, Role, {Action, Data}, Session) -> gen_server:cast(Name, {inbound, Role, {Action, Data}, Session}).
+inbound(Name, Role, {Action, Data}, Session) ->
+    gen_server:cast(Name, {inbound, Role, {Action, Data}, Session}).
 
-% @spec event(Event :: {atom(), term()}, Session :: {goethe_session,pid(),Tag :: term()})
+% @spec notify(
+%       Name :: string(),
+%       Event :: atom(),
+%       Data :: term()) -> ok.
 % @doc 
-notify(Name, Event, Data) -> gen_server:cast(Name, {event, {Event, Data}}).
+notify(Name, Event, Data) ->
+    gen_server:cast(Name, {event, {Event, Data}}).
 
-% @spec get_api(Event :: {atom(), term()}, Session :: {goethe_session,pid(),Tag :: term()})
+-spec get_api(
+    Name :: string() | atom(),
+    Role :: role(),
+    Session :: session()) -> ok.
 % @doc 
-get_api(Name, Role, Session) -> gen_server:call(Name, {get_api, Role, Session}).
+get_api(Name, Role, Session) ->
+    gen_server:call(Name, {get_api, Role, Session}).
 
-% @spec get_api(Event :: {atom(), term()}, Session :: {goethe_session,pid(),Tag :: term()})
+% @spec check_deps(
+%       Name :: string(),
+%       Available :: list()) -> ok.
 % @doc 
-check_deps(Name, Available) -> gen_server:call(Name, {check_deps, {Available}}).
+check_deps(Name, Available) ->
+    gen_server:call(Name, {check_deps, {Available}}).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 %
 %  gen_server functions
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%==========================================================================
 start(Name, Mod, Args, Deps) -> gen_server:start({local, Name}, ?MODULE, [Name, Mod, Args, Deps], []).
 start_link(Name, Mod, Args, Deps) -> gen_server:start_link({local, Name}, ?MODULE, [Name, Mod, Args, Deps], []).
 
@@ -144,7 +169,9 @@ handle_cast({inbound, Role, {Action, Data}, Session}, #state{mod=Mod,nstate=NSta
     {ok, NewNState} -> {noreply, State#state{nstate=NewNState}, hibernate};
     {ok, NewNState, hibernate} -> {noreply, State#state{nstate=NewNState}, hibernate, hibernate};
     {stop, Reason, NewNState} -> {stop, Reason, State#state{nstate=NewNState}};
-    no_match -> {noreply, State}
+    no_match ->
+        logger:info("Unexpected inbound message in Module: ~p Action: [~p]~p:~p", [Mod, Role, Action, Data]),
+        {noreply, State}
     end;
 
 handle_cast({event, {Event, Data}}, #state{mod=Mod,nstate=NState} = State) ->
