@@ -9,7 +9,8 @@
 
 % Module application exports
 -export([get_auth_by_name/1,
-         get_auth_by_email/1]).
+         get_auth_by_email/1,
+         auth/3]).
 
 % Module namespace - Must be an atom.
 -define(NAME, auth).
@@ -40,7 +41,9 @@ start_link() -> goethe_module:start_link(?NAME, ?MODULE, [], []).
 %    Called when a code update occurs
 %
 %%==========================================================================
-init(_Args) -> {ok, #state{}}.
+init(_Args) ->
+    goethe:clean({"session", "all"}),
+    {ok, #state{}}.
 terminate(_Reason, _State) -> normal.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
@@ -54,9 +57,23 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%==========================================================================
 get_auth_by_name(UserName) ->
     goethe:get({"auth", "by_name"}, UserName, goethe_principle).
-
 get_auth_by_email(Email) ->
     goethe:get({"auth", "by_email"}, Email, goethe_principle).
+auth(Session, Principle, Password) ->
+    {ok, StoredPassword} = Principle:get(password),
+    case Password of
+        StoredPassword ->
+            case Principle:get(is_admin) of
+                true ->
+                    goethe:notify(admin_logged_in, {Principle}),
+                    Session:admin(Principle);
+                _ -> Session:auth(Principle)
+            end,
+            {ok, UserName} = Principle:get(name),
+            goethe:notify(auth_login, {Session, Principle}),
+            {ok, UserName};
+        _ -> {error, badcreds}
+    end.
 
 
 %%==========================================================================
@@ -75,52 +92,36 @@ handle_internal(_Request, _State) -> no_match.
 %    messages directly from the client.
 %
 %%==========================================================================
-handle_inbound(fencrypt, register, {[
+handle_inbound(web, register, {[
             {<<"email">>, _Email},
             {<<"username">>, _UserName},
             {<<"password">>, _Password}
         ]}, _Session, State) ->
     logger:debug("Received register from client"),
     % TODO register
-    {ok, State};
+    {ack, State};
 
-handle_inbound(fencrypt, login, {[
+handle_inbound(Role, login, {[
             {<<"username">>, UserName},
             {<<"password">>, Password}
-        ]}, Session, State) ->
+        ]}, Session, State) when fencrypt == Role; web == Role ->
     logger:debug("Received username login from client"),
     {ok, Principle} = get_auth_by_name(UserName),
-    case auth(Principle, Password) of
-        {ok, Principle} ->
-            case Principle:get(is_admin) of
-                true -> Session:admin(Principle);
-                _ -> Session:auth(Principle)
-            end,
-            goethe:notify('auth.login', {Session, Principle});
-        {error, badcreds} ->
-            goethe:notify('auth.badcreds', {Session})
-    end,
-    {ok, State};
+    case auth(Session, Principle, Password) of
+        {ok, UserName} -> {ack, {<<"welcome">>,UserName}, State};
+        {error, badcreds} -> {nack, <<"bad_credentials">>, State}
+    end;
 
-handle_inbound(fencrypt, login, {[
+handle_inbound(Role, login, {[
             {<<"email">>, Email},
             {<<"password">>, Password}
-        ]}, Session, State) ->
+        ]}, Session, State) when fencrypt == Role; web == Role ->
     logger:debug("Received email from client"),
     {ok, Principle} = goethe_principle:get_by_email(Email),
-    case auth(Principle, Password) of
-        {ok, Principle} ->
-            case Principle:get(is_admin) of
-                true -> Session:admin(Principle);
-                _ -> Session:auth(Principle)
-            end,
-            UserName = Principle:get(username),
-            goethe:ack(Session, <<"auth.login">>, [{<<"welcome">>,UserName}]),
-            goethe:notify('auth.login', {Session, Principle});
-        {error, badcreds} ->
-            goethe:nack(Session, <<"auth.login">>, <<"bad_credentials">>)
-    end,
-    {ok, State};
+    case auth(Session, Principle, Password) of
+        {ok, UserName} -> {ack, [{<<"welcome">>,UserName}], State};
+        {error, badcreds} -> {nack, <<"bad_credentials">>, State}
+    end;
 
 handle_inbound(_Role, _Action, _Data, _Session, _State) -> no_match.
 
@@ -143,11 +144,3 @@ handle_event(_Event, _Data, _State) -> no_match.
 %
 %%==========================================================================
 get_api(_Role) -> {ok, {}}.
-
-
-auth(Principle, Password) ->
-    {ok, StoredPassword} = Principle:get(password),
-    case Password of
-        StoredPassword -> {ok, Principle};
-        _ -> {error, badcreds}
-    end.

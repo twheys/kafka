@@ -3,7 +3,7 @@
 
 % public socket server functions
 -export([send_msg/1,pencrypt/1,fencrypt/1,auth/1,admin/1,cloud/0,close/0,timeout/0]).
--export([new/1,get/1,set/2,save/0,delete/0]).
+-export([new/1,new/3,get/1,set/2,add/2,remove/2,save/0,delete/0]).
 
 % [{<<"_id">>,Id},
 %  {<<"_rev">>,_},
@@ -18,16 +18,17 @@ new({Json}) when is_list(Json) ->
 new(Listener) when is_pid(Listener) -> new(nil,Listener,nil).
 new(Id,Listener,Principle) -> {goethe_session,Id,Listener,Principle}.
 
-
+% sessions can only be saved once!!!
 save() ->
-    {ok, UserName} = Principle:get(username),
-    {ok, New} = goethe:save({[
+    {ok, UserName} = Principle:get(name),
+    {ok, NewId} = goethe:save({[
             {<<"_id">>,Id},
+            {<<"_rev">>,nil},
             {<<"proc_id">>,list_to_binary(pid_to_list(Listener))},
             {<<"username">>,UserName},
             {<<"g_type">>,<<"session">>}
         ]}),
-    new(New).
+    new(NewId, Listener, Principle).
 
 
 delete() ->
@@ -72,4 +73,7 @@ timeout() ->
 get(principle) -> {ok, Principle}.
 
 set(principle, NewPrinciple) ->
-    {goethe_session,Id,Listener,NewPrinciple}.
+    {?MODULE,Id,Listener,NewPrinciple}.
+
+add(_, _) -> {error, unknown_value}.
+remove(_, _) -> {error, unknown_value}.

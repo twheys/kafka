@@ -158,3 +158,14 @@ chat(Pid, Msg) ->
 
 pchat(Pid, UserName, Msg) ->
     chat(Pid, "/w " ++ UserName ++ " " ++ Msg).
+
+get_rooms(Pid) ->
+    Pid ! {send, <<"{\"action\":\"rooms.list\"}">>}.
+
+join_room(Pid, Room) ->
+    Pid ! {send, list_to_binary([
+            <<"{\"rooms.join\":{">>,
+            <<"\"name\":\"">>, 
+            Room,
+            <<"\"}}">>
+        ])}.

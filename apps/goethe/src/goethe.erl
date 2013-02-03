@@ -21,7 +21,7 @@
 -export([ack/2,ack/3,nack/3,nack/4,notify/2,notify/3,get_session_by_username/1]).
 
 % public db functions
--export([db/0,get/3,save/1]).
+-export([db/0,get/2,get/3,clean/1,clean/2,save/1,get_enum/1,get_enum/2]).
 
 -define(GAME_SERVER_NAME, game_server).
 -define(SOCKET_SERVER_NAME, socket_server).
@@ -50,7 +50,7 @@ release_connection(Connection) when is_pid(Connection) ->
 
 recv(_, _, []) -> ok;
 recv(Role, Session, [{Module, Action, Data} | Rest]) -> 
-    gen_server:call(?MODULE, {recv, {Role, {Module, Action, Data}, Session}}),
+    gen_server:cast(?MODULE, {recv, {Role, {Module, Action, Data}, Session}}),
     recv(Role, Session, Rest).
 
 notify(EventName, Data) ->
@@ -71,13 +71,23 @@ nack(Session, Action, Code) ->
 nack(Session, Action, Code, Info) ->
     gen_server:cast(?MODULE, {nack, {Session, Action, Code, Info}}).
 
+get(View, As) ->
+    gen_server:call(?MODULE, {get, {View, [], As}}).
 get(View, Key, As) ->
-    gen_server:call(?MODULE, {get, {View, Key, As}}).
+    gen_server:call(?MODULE, {get, {View, [{key, Key}], As}}).
+clean(View) ->
+    gen_server:call(?MODULE, {clean, {View, []}}).
+clean(View, Key) ->
+    gen_server:call(?MODULE, {clean, {View, [{key, Key}]}}).
 save(Doc) ->
     gen_server:call(?MODULE, {save, {Doc}}).
+get_enum(View) ->
+    gen_server:call(?MODULE, {get_enum, {View, []}}).
+get_enum(View, Key) ->
+    gen_server:call(?MODULE, {get_enum, {View, [{key, Key}]}}).
 
 get_session_by_username(UserName) ->
-    gen_server:call(?MODULE, {get, {{"session", "by_username"}, UserName, goethe_session}}).
+    get({"session", "by_username"}, UserName, goethe_session).
 
 
 %%==========================================================================
@@ -103,7 +113,6 @@ start_socket() ->
     {ok, {Port}} = application:get_env(app_port),
     logger:info("Initializing Socket Server on Port: ~p.", [Port]),
     Listener = goethe_socket:start_link(Port),
-	logger:info("Socket Server on port ~p successfully initialized!", [Port]),
     {ok, Listener}.
 start_db() ->
     {ok, {Host, Port, Prefix, Options}} = application:get_env(dbs),
@@ -119,58 +128,89 @@ handle_call(get_modules, _From, #state{modules=Modules} = State) ->
     logger:trace("Get modules request"),
     {reply, {ok, Modules}, State};
 
-handle_call({recv, {Role, {Module, Action, Data}, Session}}, _From, #state{modules=_Modules} = State) ->
-    % TODO check if Module is loaded.
-    logger:debug("[~p]Action: ~p.~p:~p", [Role, Module, Action, Data]),
-    spawn(goethe_module, inbound, [Module, Role, {Action, Data}, Session]),
-    {reply, ok, State};
-
 handle_call(db, _From, #state{db=Db} = State) ->
     {reply, {ok, Db}, State};
 
-handle_call({get, {View, Key, As}}, _From, #state{db=Db} = State) ->
-    Result = case couchbeam_view:fetch(Db, View, [{key, Key}]) of
-        {ok, [{[{<<"id">>,_},
-               {<<"key">>,_},
-               {<<"value">>,
-                Value}]}]} ->
+handle_call({get, {View, Options, As}}, _From, #state{db=Db} = State) ->
+    Reply = case couchbeam_view:fold(
+        fun({[{<<"id">>,_},{<<"key">>,_},{<<"value">>,Value}]}, Acc) ->
             Entity = As:new(Value),
-            {ok, Entity};
-        Other ->
-            logger:debug("Check get..: ~p", [Other]),
-            {error, notfound}
+            [Entity|Acc]
+        end, [], Db, View, Options) of
+        {error, Reason} ->
+            logger:debug("Check get..: ~p", [Reason]),
+            {error, Reason};
+        [] ->
+            {error, not_found};
+        [Result] ->
+            {ok, Result};
+        Result ->
+            {ok, Result}
     end,
-    {reply, Result, State};
+    {reply, Reply, State};
+
+handle_call({clean, {View, Options}}, _From, #state{db=Db} = State) ->
+    Reply = case couchbeam_view:fold(
+        fun({[{<<"id">>,_},{<<"key">>,_},{<<"value">>,Value}]}, Acc) ->
+            [Value|Acc]
+        end, [], Db, View, Options) of
+        {error, Reason} ->
+            logger:debug("Check get..: ~p", [Reason]),
+            {error, Reason};
+        Result when is_list(Result) ->
+            couchbeam:delete_docs(Db, Result),
+            ok
+    end,
+    {reply, Reply, State};
 
 handle_call({save, {
-    {[{<<"_id">>,nil} | Doc]}
+    {[{<<"_id">>,nil} | [{<<"_rev">>,nil} | Doc]]}
         }}, _From, #state{db=Db} = State) ->
     logger:debug("Persisting new Entity ~p", [Doc]),
-    Result = case couchbeam:save_doc(Db, {
+    Reply = case couchbeam:save_doc(Db, {
             [{<<"created">>,<<"now">>} |
             [{<<"updated">>,<<"now">>} |
             Doc
         ]]}) of
-        {ok, New} -> {ok, New};
-        Reason -> {error, Reason}
+        {ok, NewId} -> {ok, NewId};
+        {error, Reason} -> {error, Reason}
     end,
-    {reply, Result, State};
+    {reply, Reply, State};
 
 handle_call({save, {{Doc}}}, _From, #state{db=Db} = State) ->
     logger:debug("Persisting existing Entity ~p", [Doc]),
-    Result = case couchbeam:save_doc(Db, {[
+    Reply = case couchbeam:save_doc(Db, {[
             {<<"updated">>,<<"now">>} |
             Doc
         ]}) of
-        {ok, New} -> {ok, New};
+        {ok, NewId} -> {ok, NewId};
         Reason -> {error, Reason}
     end,
-    {reply, Result, State};
+    {reply, Reply, State};
+
+handle_call({get_enum, {View, Options}}, _From, #state{db=Db} = State) ->
+    Reply = case couchbeam_view:fold(
+        fun({[{<<"id">>,_},{<<"key">>,Value},{<<"value">>,_}]}, Acc) ->
+            [Value|Acc]
+        end, [], Db, View, Options) of
+        {error, Reason} ->
+            logger:debug("Check get..: ~p", [Reason]),
+            {error, Reason};
+        Result when is_list(Result) ->
+            {ok, Result}
+    end,
+    {reply, Reply, State};
 
 handle_call(Request, _From, State) ->
     logger:info("Unexpected function call in goethe: ~p", [Request]),
     {reply, inv_call, State}.
 
+
+handle_cast({recv, {Role, {Module, Action, Data}, Session}}, #state{modules=_Modules} = State) ->
+    % TODO check if Module is loaded.
+    logger:debug("[~p]Action: ~p.~p:~p", [Role, Module, Action, Data]),
+    spawn(goethe_module, inbound, [Module, Role, {Action, Data}, Session]),
+    {noreply, State};
 
 handle_cast({register_module, {Module}}, #state{modules=Modules} = State) ->
     error_logger:info_msg("Loading Module [~p].", [Module]),
@@ -198,8 +238,8 @@ handle_cast({notify, {Event, Data}}, #state{modules=Modules} = State) ->
 handle_cast({ack, {Session, Action, Info}}, State) ->
     Session:send_msg(
         {[{<<"ack">>,
-            {
-                [{<<"action">>,Action} |
+            {[
+                {<<"action">>,Action} |
                 Info
             ]}
         }]}

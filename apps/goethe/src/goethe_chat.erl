@@ -93,16 +93,16 @@ handle_inbound(Role, chat, {[
         ]}, Session, State) when auth == Role; admin == Role ->
     logger:debug("Received [~p] chat from client", [Role]),
 	{ok, Principle} = Session:get(principle),
-    {ok, From} = Principle:get(username),
-    case parse_chat(Msg) of
-		{private, {To, ParsedMsg}} -> private_msg(Role, Session, From, To, ParsedMsg);
-		{room, {ParsedMsg}} -> room_msg(Session, From, ParsedMsg);
-		{region, {ParsedMsg}} -> region_msg(Session, From, ParsedMsg);
-		{broadcast, {ParsedMsg}} -> broadcast_msg(Session, From, ParsedMsg);
-        {ok, {ParsedMsg}} -> default_msg(Session, From, ParsedMsg);
-        {error, msg_parse_error} -> chat_error(Session, Msg)
+    {ok, From} = Principle:get(name),
+    {Ack, Reply} = case parse_chat(Msg) of
+		{private, {To, ParsedMsg}} -> private_msg(Role, From, To, ParsedMsg);
+		{room, {ParsedMsg}} -> room_msg(From, ParsedMsg);
+		{region, {ParsedMsg}} -> region_msg(From, ParsedMsg);
+		{broadcast, {ParsedMsg}} -> broadcast_msg(From, ParsedMsg);
+        {ok, {ParsedMsg}} -> default_msg(From, ParsedMsg);
+        {error, msg_parse_error} -> {nack, {<<"chat.parse">>}}
 	end,
-    {ok, State};
+    {Ack, Reply, State};
 
 handle_inbound(_Role, _Action, _Data, _Session, _State) -> no_match.
 
@@ -168,29 +168,26 @@ parse_chat("/w " ++ Rest) when length(Rest) > 0 ->
 parse_chat(Msg) ->
     {ok, {list_to_binary(Msg)}}.
 
-private_msg(Role, Session, From, To, Msg) ->
+private_msg(Role, From, To, Msg) ->
     case goethe:get_session_by_username(To) of
     {ok, Target} ->
-        goethe:ack(Session, <<"chat.chat">>, [
+        goethe:notify('chat.deliver_msg', {Role, Target, From, To, private, Msg}),
+        {ack, [
             {<<"to">>,To},
             {<<"type">>,private},
-            {<<"msg">>,Msg}]),
-        goethe:notify('chat.deliver_msg', {Role, Target, From, To, private, Msg});
-    {error, notfound} ->
-        goethe:nack(Session, <<"chat.chat">>, <<"not_found">>, [{<<"user">>, To}])
+            {<<"msg">>,Msg}]};
+    {error, not_found} ->
+        {nack, {<<"not_found">>, {<<"user">>, To}}}
     end.
 
-room_msg(Session, From, Msg) ->
-    goethe:notify('chat.room_chat', {Session, From, Msg}).
+room_msg(From, Msg) ->
+    goethe:notify('chat.room_chat', {From, Msg}).
 
-region_msg(Session, From, Msg) ->
-    goethe:notify('chat.region_chat', {Session, From, Msg}).
+region_msg(From, Msg) ->
+    goethe:notify('chat.region_chat', {From, Msg}).
 
-broadcast_msg(Session, From, Msg) ->
-    goethe:notify('chat.broadcast', {Session, From, Msg}).
+broadcast_msg(From, Msg) ->
+    goethe:notify('chat.broadcast', {From, Msg}).
 
-default_msg(Session, From, Msg) ->
-    goethe:notify(default, chat, {Session, From, Msg}).
-
-chat_error(Session, Msg) ->
-    goethe:notify('chat.parse_error', {Session, Msg}).
+default_msg(From, Msg) ->
+    goethe:notify(default, chat, {From, Msg}).

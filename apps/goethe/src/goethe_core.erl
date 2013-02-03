@@ -50,7 +50,10 @@ start_link() -> goethe_module:start_link(?NAME, ?MODULE, [], []).
 %    Called when a code update occurs
 %
 %%==========================================================================
-init(_Args) -> {ok, #state{pubkey="abcdefg",privkey="1234567"}}.
+init(_Args) -> 
+    PubKey = <<"abcdefg">>,
+    PrivKey = <<"1234567">>,
+    {ok, #state{pubkey=PubKey,privkey=PrivKey}}.
 terminate(_Reason, _State) -> normal.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
@@ -62,7 +65,6 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %    from other modules.
 %
 %%==========================================================================
-warn_timeout(Session) -> goethe_module:handle_internal({warn_timeout, {Session}}).
 
 
 %%==========================================================================
@@ -71,16 +73,6 @@ warn_timeout(Session) -> goethe_module:handle_internal({warn_timeout, {Session}}
 %    The implementation for the Public API in the previous section.
 %
 %%==========================================================================
-handle_internal({warn_timeout, {Session}}, State) ->
-    Session:send_msg(
-        {[{<<"client.error">>,
-            {
-                {<<"code">>,<<"timeout">>}
-            }
-        }]}
-    ),
-    {noreply, State};
-
 handle_internal(_Request, _State) -> no_match.
 
 
@@ -100,12 +92,11 @@ handle_inbound(plain, hello, {}, Session, #state{privkey=PrivKey,pubkey=PubKey} 
     Session:pencrypt(PrivKey),
     {ok, State};
     
-handle_inbound(_, ping, {}, Session, State) ->
+handle_inbound(_, ping, {}, _Session, State) ->
     logger:info("Received ping from client"),
-    goethe:ack(Session, <<"server.ping">>, [
+    {ack, [
         {<<"reply">>,<<"pong!">>}
-        ]),
-    {ok, State};
+        ], State};
     
 handle_inbound(pencrypt, encrypt, {[
         {<<"key">>,Key}
@@ -138,6 +129,17 @@ handle_event('server.client_error', {Session, Blame, Code}, State) ->
         }]}
     ),
     {ok, State};
+
+handle_event('server.timeout', {Session}, State) ->
+    Session:send_msg(
+        {[{<<"client.error">>,
+            {
+                {<<"code">>,<<"timeout">>}
+            }
+        }]}
+    ),
+    Session:timeout(),
+    {noreply, State};
 
 handle_event(_Event, _Data, _State) -> no_match.
 

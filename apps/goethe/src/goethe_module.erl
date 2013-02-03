@@ -22,7 +22,7 @@ name,mod,deps=[],nstate
 %%==========================================================================
 -type principle() :: {goethe_principle, Email :: string(), UserName :: string(), IsAdmin :: boolean()}.
 -type session() :: {goethe_session, Listener :: pid(), Principle :: principle() | {}}.
--type role() :: 'plain' | 'pencrypt' | 'fencrypt' | 'auth' | 'admin' | 'cloud'.
+-type role() :: 'plain' | 'pencrypt' | 'fencrypt' | 'web' | 'auth' | 'admin' | 'cloud'.
 
 -callback init(Args :: term()) ->
     {ok, State :: term()} | 
@@ -33,9 +33,8 @@ name,mod,deps=[],nstate
         Request :: term(),
         State :: term()) ->
     {reply, Reply :: term(), NewState :: term()} |
-    {reply, Reply :: term(), NewState :: term(), timeout() | hibernate} |
+    %{reply, Reply :: term(), NewState :: term(), timeout() | hibernate} |
     {ok, NewState :: term()} |
-    {ok, NewState :: term(), timeout() | hibernate} |
     {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
     {stop, Reason :: term(), NewState :: term()} |
     no_match.
@@ -45,8 +44,11 @@ name,mod,deps=[],nstate
         Data:: term(),
         Session :: session(),
         State :: term()) ->
+    {ack, NewState :: term()} |
+    {ack, Reply :: list(), NewState :: term()} |
+    {nack, Code, NewState :: term()} |
+    {nack, {Code, Reply :: list()}, NewState :: term()} |
     {ok, NewState :: term()} |
-    {ok, NewState :: term(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: term()} |
     no_match.
 -callback handle_event(
@@ -54,7 +56,6 @@ name,mod,deps=[],nstate
         Data:: term(),
         State :: term()) ->
     {ok, NewState :: term()} |
-    {ok, NewState :: term(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: term()} |
     no_match.
 -callback get_api(Role:: role()) ->
@@ -139,9 +140,7 @@ init([Name, Mod, Args, Deps]) ->
 handle_call({internal, Request}, _, #state{mod=Mod,nstate=NState} = State) ->
     case Mod:handle_internal(Request, NState) of
     {reply, Reply, NewNState} -> {reply, Reply, State#state{nstate=NewNState}};
-    {reply, Reply, NewNState, hibernate} -> {reply, Reply, State#state{nstate=NewNState}, hibernate};
-    {ok, NewNState} -> {reply, ok, State#state{nstate=NewNState}, hibernate};
-    {ok, NewNState, hibernate} -> {reply, ok, State#state{nstate=NewNState}, hibernate, hibernate};
+    {ok, NewNState} -> {reply, ok, State#state{nstate=NewNState}};
     {stop, Reason, Reply, NewNState} -> {stop, Reason, Reply, State#state{nstate=NewNState}};
     {stop, Reason, NewNState} -> {stop, Reason, State#state{nstate=NewNState}};
     no_match -> {reply, no_match, State}
@@ -166,18 +165,38 @@ handle_call(Request, _From, State) ->
 
 handle_cast({inbound, Role, {Action, Data}, Session}, #state{mod=Mod,nstate=NState} = State) ->
     case Mod:handle_inbound(Role, Action, Data, Session, NState) of
-    {ok, NewNState} -> {noreply, State#state{nstate=NewNState}, hibernate};
-    {ok, NewNState, hibernate} -> {noreply, State#state{nstate=NewNState}, hibernate, hibernate};
+    {ack, NewNState} ->
+        goethe:ack(Session, Action),
+        {noreply, State#state{nstate=NewNState}};
+    {ack, [Reply], NewNState} ->
+        goethe:ack(Session, Action, [Reply]),
+        {noreply, State#state{nstate=NewNState}};
+    {ack, Reply, NewNState} ->
+        goethe:ack(Session, Action, [Reply]),
+        {noreply, State#state{nstate=NewNState}};
+
+    {nack, {Code, [Reply]}, NewNState} ->
+        goethe:nack(Session, Action, Code, [Reply]),
+        {noreply, State#state{nstate=NewNState}};
+    {nack, {Code, Reply}, NewNState} ->
+        goethe:nack(Session, Action, Code, [Reply]),
+        {noreply, State#state{nstate=NewNState}};
+    {nack, Code, NewNState} ->
+        goethe:nack(Session, Action, Code),
+        {noreply, State#state{nstate=NewNState}};
+
+    {ok, NewNState} -> {noreply, State#state{nstate=NewNState}};
+
     {stop, Reason, NewNState} -> {stop, Reason, State#state{nstate=NewNState}};
     no_match ->
         logger:info("Unexpected inbound message in Module: ~p Action: [~p]~p:~p", [Mod, Role, Action, Data]),
+        goethe:nack(Session, Action, <<"invalid.action">>),
         {noreply, State}
     end;
 
 handle_cast({event, {Event, Data}}, #state{mod=Mod,nstate=NState} = State) ->
     case Mod:handle_event(Event, Data, NState) of
-    {ok, NewNState} -> {noreply, State#state{nstate=NewNState}, hibernate};
-    {ok, NewNState, hibernate} -> {noreply, State#state{nstate=NewNState}, hibernate, hibernate};
+    {ok, NewNState} -> {noreply, State#state{nstate=NewNState}};
     {stop, Reason, Reply, NewNState} -> {stop, Reason, Reply, State#state{nstate=NewNState}};
     {stop, Reason, NewNState} -> {stop, Reason, State#state{nstate=NewNState}};
     no_match -> {noreply, State}

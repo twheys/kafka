@@ -1,11 +1,18 @@
--module(goethe_principle, [Id,Email,UserName,Password,IsAdmin]).
+-module(goethe_principle, [Id,Rev,Name,Email,Password,IsAdmin]).
 -author('Tim Heys twheys@gmail.com').
 
--export([new/1,new/3,new/5,get/1,set/2,save/0,delete/0]).
+-export([new/1,new/3,get/1,set/2,add/2,remove/2,save/0,delete/0]).
+
+-define(ID, <<"_id">>).
+-define(REV, <<"_rev">>).
+-define(NAME, <<"name">>).
+-define(EMAIL, <<"email">>).
+-define(PASSWORD, <<"password">>).
+-define(IS_ADMIN, <<"is_admin">>).
 
 % [{<<"_id">>,Id},
 %		{<<"_rev">>,_},
-%		{<<"name">>,UserName},
+%		{<<"name">>,Name},
 %		{<<"email">>,Email},
 %		{<<"password">>,Password},
 %		{<<"is_admin">>,IsAdmin},
@@ -13,25 +20,27 @@
 %		{<<"updated">>,_},
 %		{<<"g_type">>,<<"auth">>}]
 new({Json}) when is_list(Json) ->
-	Id = proplists:get_value(<<"_id">>, Json),
-	Email = proplists:get_value(<<"email">>, Json),
-	UserName = proplists:get_value(<<"name">>, Json),
-	Password = proplists:get_value(<<"password">>, Json),
-	IsAdmin = proplists:get_value(<<"is_admin">>, Json),
-    new(Id, Email, UserName, Password, IsAdmin).
-new(Email,UserName,Password) -> new(nil,Email,UserName,Password,false).
-new(Id,Email,UserName,Password,IsAdmin) -> {goethe_principle,Id,Email,UserName,Password,IsAdmin}.
+	Id = proplists:get_value(?ID, Json),
+	Rev = proplists:get_value(?REV, Json),
+	Name = proplists:get_value(?NAME, Json),
+	Email = proplists:get_value(?EMAIL, Json),
+	Password = proplists:get_value(?PASSWORD, Json),
+	IsAdmin = proplists:get_value(?IS_ADMIN, Json),
+    new(Id, Rev, Name, Email, Password, IsAdmin).
+new(Email,Name,Password) -> new(nil, nil, Name, Email, Password, false).
+new(Id,Rev,Name,Email,Password,IsAdmin) -> {?MODULE,Id,Rev,Name,Email,Password,IsAdmin}.
 
 
 save() ->
-    {ok, New} = goethe:save({[
-	        {<<"_id">>,Id},
-			{<<"name">>,UserName},
-			{<<"email">>,Email},
-			{<<"password">>,Password},
-			{<<"is_admin">>,IsAdmin},
+    {ok, NewId} = goethe:save({[
+	        {?ID,Id},
+	        {?REV,Rev},
+			{?NAME,Name},
+			{?EMAIL,Email},
+			{?PASSWORD,Password},
+			{?IS_ADMIN,IsAdmin},
 			{<<"g_type">>,<<"auth">>}]}),
-	new(New).
+	new(NewId, Rev, Name, Email, Password, IsAdmin).
 
 
 delete() ->
@@ -44,17 +53,20 @@ delete() ->
 %
 %%==========================================================================
 get(email) -> {ok, Email};
-get(username) -> {ok, UserName};
+get(name) -> {ok, Name};
 get(password) -> {ok, Password};
 get(is_admin) -> {ok, IsAdmin};
 get(_) -> {error, unknown_value}.
 
 set(email, NewEmail) ->
-    {goethe_principle,Id,NewEmail,UserName,Password,IsAdmin};
-set(username, NewUserName) ->
-    {goethe_principle,Id,Email,NewUserName,Password,IsAdmin};
+    {?MODULE,Id,Rev,Name,NewEmail,Password,IsAdmin};
+set(name, NewName) ->
+    {?MODULE,Id,Rev,Name,Email,NewName,Password,IsAdmin};
 set(password, NewPassword) ->
-    {goethe_principle,Id,Email,UserName,NewPassword,IsAdmin};
+    {?MODULE,Id,Rev,Name,Email,Name,NewPassword,IsAdmin};
 set(is_admin, NewIsAdmin) ->
-    {goethe_principle,Id,Email,UserName,Password,NewIsAdmin};
+    {?MODULE,Id,Rev,Name,Email,Name,Password,NewIsAdmin};
 set(_, _) -> {error, unknown_value}.
+
+add(_, _) -> {error, unknown_value}.
+remove(_, _) -> {error, unknown_value}.

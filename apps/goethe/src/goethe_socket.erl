@@ -4,7 +4,7 @@
 -export([start/1,start_link/1]).
 
 -define(TCP_OPTIONS, [binary, {active, false}]).
--define(DEFAULT_TIMEOUT, 10 * 60 * 10000).
+-define(DEFAULT_TIMEOUT, 10 * 60 * 1000).
 
 -record(state, {
 sock,session,status,filters=[]
@@ -28,6 +28,7 @@ start_link(Port) -> spawn_link(fun() -> init(Port, ?TCP_OPTIONS) end).
 init(Port, TcpOptions) ->
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Sock} ->
+		logger:info("Socket Server on port ~p successfully initialized!", [Port]),
 	    Top = self(),
 		spawn(fun()-> accept(Sock, Top) end),
         receive
@@ -84,12 +85,12 @@ listen(#state{sock=Sock, status=Status, filters=Filters, session=Session} = Stat
     % End connection
 		{stop, Reason} ->
 			Session:delete(),
-			exit(stopped, Reason);
+			exit({stop, Reason});
 	
 	% State Handlers
 		Message -> common(Status, State, Message)
 	after ?DEFAULT_TIMEOUT ->
-		timeout(Session)
+		goethe:notify(server.timeout, {Session})
 	end,
 	listen(State).
 
@@ -154,6 +155,7 @@ cloud(_, Other) ->
 %
 %%==========================================================================
 write(Tuple, Sock, Filters) ->
+	logger:trace("Outbound Tuple: ~p", [Tuple]),
 	{ok, Outbound} = write_filter(Tuple, Filters),
 	logger:trace("Outbound: ~p", [Outbound]),
 	gen_tcp:send(Sock, Outbound).
@@ -228,11 +230,3 @@ common(timeout) ->
 common(Other) -> 
 	logger:warn("~p", [{inv_sock_action, Other}]),
 	ok.
-
-
-timeout(Session) -> 
-    spawn_link(fun() ->
-	    goethe_core:warn_timeout(Session),
-    	goethe:timeout(Session)
-    end),
-    ok.
