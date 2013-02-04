@@ -7,35 +7,37 @@
 -define(ADDRESS, "localhost").
 -define(PORT, 31863).
 
-start() ->
-    io:format("CLIENT connecting~n"),
-    spawn_link(?MODULE, bootstrap, [?ADDRESS, ?PORT]).
-start(Port) ->
-    io:format("CLIENT connecting~n"),
-    spawn_link(?MODULE, bootstrap, [?ADDRESS, Port]).
+start(Listener) ->
+    io:format("~pconnecting~n", [Listener]),
+    spawn_link(?MODULE, bootstrap, [Listener, ?ADDRESS, ?PORT]).
+start(Listener, Port) ->
+    io:format("~pCLIENT connecting~n", [Listener]),
+    spawn_link(?MODULE, bootstrap, [Listener, ?ADDRESS, Port]).
 
-bootstrap(Address, Port) ->
+bootstrap(Listener, Address, Port) ->
     case gen_tcp:connect(Address, Port, ?TCP_OPTIONS) of 
-        {ok, Sock} -> client(Sock);
+        {ok, Sock} -> client(Sock, Listener);
         {error,econnrefused} ->
             timer:sleep(5000),
-            bootstrap(Address, Port)
+            bootstrap(Listener, Address, Port)
     end.
 
-client(Sock) ->
+client(Sock, Listener) ->
     inet:setopts(Sock, [{active, once}]),
     receive
 	    {tcp, Sock, Bin}  ->
             {ok, Incoming} = read_filter(Bin, [binary]),
-            io:format("~pCLIENT RECV: ~s~n", [self(),Incoming]),
-            client(Sock);
+            io:format("~pRECV: ~s~n", [self(),Incoming]),
+            %Json = ejson:decode(Incoming),
+            %Listener ! Json,
+            client(Sock, Listener);
 	    {tcp_closed, Sock} -> io:format("Connection closed!~n");
 
         {send, Msg} -> 
             {ok, Outgoing} = write_filter(Msg, []),
-            io:format("~pCLIENT SEND: ~s~n", [self(),Outgoing]),
+            io:format("~pSEND: ~s~n", [self(),Outgoing]),
             gen_tcp:send(Sock, Outgoing),
-            client(Sock);
+            client(Sock, Listener);
 
         disconnect -> 
             gen_tcp:close(Sock),
@@ -43,11 +45,11 @@ client(Sock) ->
 
         {reconnect, {Address, Port}} -> 
             gen_tcp:close(Sock),
-            bootstrap(Address, Port);
+            bootstrap(Listener, Address, Port);
 
         reconnect -> 
             gen_tcp:close(Sock),
-            bootstrap(?ADDRESS, ?PORT);
+            bootstrap(Listener, ?ADDRESS, ?PORT);
 
         reload -> 
             test_client:client(Sock);
@@ -76,7 +78,7 @@ quick() ->
     quick(<<"timmy">>, <<"test">>).
 
 quick(UserName, Password) ->
-    Pid = test_client:start(),
+    Pid = test_client:start(self()),
     test_client:send_junk(Pid),
     timer:sleep(100),
     test_client:ping(Pid),
@@ -169,3 +171,9 @@ join_room(Pid, Room) ->
             Room,
             <<"\"}}">>
         ])}.
+
+get_room_members(Pid) ->
+    Pid ! {send, <<"{\"action\":\"rooms.members\"}">>}.
+
+leave_room(Pid) ->
+    Pid ! {send, <<"{\"action\":\"rooms.leave\"}">>}.

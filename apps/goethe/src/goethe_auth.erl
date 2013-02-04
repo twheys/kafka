@@ -42,7 +42,6 @@ start_link() -> goethe_module:start_link(?NAME, ?MODULE, [], []).
 %
 %%==========================================================================
 init(_Args) ->
-    goethe:clean({"session", "all"}),
     {ok, #state{}}.
 terminate(_Reason, _State) -> normal.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.

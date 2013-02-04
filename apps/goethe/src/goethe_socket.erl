@@ -26,6 +26,7 @@ start_link(Port) -> spawn_link(fun() -> init(Port, ?TCP_OPTIONS) end).
 %
 %%==========================================================================	
 init(Port, TcpOptions) ->
+    goethe:clean({"session", "all"}),
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Sock} ->
 		logger:info("Socket Server on port ~p successfully initialized!", [Port]),
@@ -119,19 +120,21 @@ pencrypt(_, Other) ->
 
 
 fencrypt(#state{session=Session} = State, {auth, {Principle}}) ->
-	NewSession = Session:set(principle, Principle),
-	NewSession:save(),
+	NSession = Session:build(Principle),
+	PSession = NSession:save(),
+	logger:debug("Persisted Session: ~p", [PSession]),
 	listen(State#state{
 		status=auth,
-		session=NewSession
+		session=PSession
 	});
 fencrypt(#state{session=Session} = State, {admin, {Principle}}) ->
-	NewSession = Session:set(principle, Principle),
 	logger:info("Admin logging in: ~p", Principle),
-	NewSession:save(),
+	NSession = Session:build(Principle),
+	PSession = NSession:save(),
+	logger:debug("Persisted Session: ~p", [PSession]),
 	listen(State#state{
 		status=admin,
-		session=NewSession
+		session=PSession
 	});
 fencrypt(_, Other) ->
 	common(Other).

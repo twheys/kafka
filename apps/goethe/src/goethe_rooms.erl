@@ -48,10 +48,13 @@ start_link() -> goethe_module:start_link(?NAME, ?MODULE, [], []).
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init(_Args) ->
-    goethe:clean({"rooms", "all"}),
     {ok, RoomNames} = get_avail_room_names(),
-    Goethe = goethe_room:new(<<"Goethe">>),
-    Goethe:save(),
+    {ok, Rooms} = get_room_list(),
+    if 0 == length(Rooms) ->
+    		Goethe = goethe_room:new(<<"Goethe">>),
+    		Goethe:save();
+		true -> ok
+	end,
 	{ok, #state{roomnames=RoomNames}}.
 terminate(_Reason, _State) -> normal.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
@@ -92,23 +95,40 @@ handle_inbound(Role, list, {}, _Session, State)
     {ok, RoomList} = get_room_list(),
     {ack, {<<"list">>, RoomList}, State};
 
+handle_inbound(Role, members, {}, _Session, State)
+		when auth == Role; admin == Role ->
+    logger:debug("Received room.members from client"),
+	{ok, UserName} = Session:get(name),
+	case get_current_room(UserName) of
+		{ok, Room} ->
+			{ok, UserList} = get_user_list(Room),
+    		{ack, {<<"list">>, UserList}, State};
+		_ -> {ack, {<<"not_in_room">>, UserList}, State};
+	end;
+
 handle_inbound(Role, join, {[
             {<<"name">>, RoomName}
         ]}, Session, State)
 		when auth == Role; admin == Role ->
     logger:debug("Received room.join from client"),
-    {ok, Principle} = Session:get(principle),
     case get_room(RoomName) of
 	{ok, Room} ->
-	    case validate_room_join(Principle, Room) of
+	    case validate_room_join(Session, Room) of
     	ok ->
-    		{ok, RoomList} = join_room(Principle, Room),
-    		{ack, {<<"users">>, RoomList}, State};
+    		{ok, UserList} = join_room(Session, Room),
+    		{ack, {<<"users">>, UserList}, State};
     	{error, Reason} ->
     		{nack, {Reason, {<<"room">>, RoomName}}, State}
 		end;
     {error, not_found} ->
-        {nack, {<<"no_such_room">>, {<<"room">>, RoomName}}, State}
+        {nack, {<<"room_not_found">>, {<<"room">>, RoomName}}, State}
+	end;
+
+handle_inbound(Role, leave, {}, Session, State)
+		when auth == Role; admin == Role ->
+	case leave_current_room(Session) of
+		ok -> {ack, State};
+		{error, Reason} ->  {nack, {Reason}, State}
 	end;
 
 handle_inbound(_Role, _Action, _Data, _Session, _State) -> no_match.
@@ -121,6 +141,17 @@ handle_inbound(_Role, _Action, _Data, _Session, _State) -> no_match.
 %    event occurs, such as start up or user authentication.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+handle_event('chat.room_chat', {Role, From, Msg}, State) 
+    	when is_binary(From), is_binary(Msg) ->
+    case get_current_room(From) of
+	{ok, Room} ->
+		    {ok, Sessions} = Room:get(user_sessions),
+		    [goethe:notify('chat.deliver_msg', {Role, Target, From, room, Msg}) || 
+				Target <- Sessions];
+    {error, not_found} -> logger:warn("User is trying to chat in a room but not currently in one.")
+	end,
+    {ok, State};
+
 handle_event(_Event, _Data, _State) -> no_match.
 
 
@@ -139,34 +170,43 @@ get_api(_Role) -> {ok, {}}.
 %  util functions
 %
 %%==========================================================================
-validate_room_join(Principle, Room) ->
-	{ok, Users} = Room:get(users),
+validate_room_join(Session, Room) ->
+	{ok, UserSessions} = Room:get(user_sessions),
 	{ok, MaxUsers} = Room:get(max_users),
-	{ok, UserName} = Principle:get(name),
-	{ok, IsAdmin} = Principle:get(is_admin),
-	CurrentUsers = length(Users),
-	UserInRoom = 0 == lists:filter(fun(X) -> X == UserName end, Users),
+	{ok, UserName} = Session:get(name),
+	{ok, IsAdmin} = Session:get(is_admin),
+	CurrentUsers = length(UserSessions),
+	UserInRoom = [] =/= lists:filter(fun(X) -> {ok, UserName} == X:get(name) end, UserSessions),
+	IsFull = MaxUsers < CurrentUsers,
+	logger:debug("Validate room join ~p", [Session]),
 	if
-		UserInRoom -> already_in_room;
+		UserInRoom -> {error, already_in_room};
 		IsAdmin -> ok;
-		MaxUsers < CurrentUsers -> room_full;
+		IsFull -> {error, room_full};
 		true -> ok
 	end.
 
 
-join_room(Principle, Room) ->
-	{ok, UserName} = Principle:get(name),
-	leave_current_room(UserName),
-	NRoom = Room:add(users, UserName),
+join_room(Session, Room) ->
+	{ok, UserName} = Session:get(name),
+	leave_current_room(Session),
+	NRoom = Room:add(user_sessions, Session),
 	NRoom:save(),
 	goethe:notify(user_joined_room, {NRoom, UserName}),
-	NRoom:get(users).
+	{ok, UserList} = NRoom:get(user_sessions),
+	{ok, proplists:get_keys(UserList)}.
 
-leave_current_room(UserName) ->
+leave_current_room(Session) ->
+	{ok, UserName} = Session:get(name),
 	case get_current_room(UserName) of
 		{ok, OldRoom} ->
-			NOldRoom = OldRoom:remove(UserName),
+			NOldRoom = OldRoom:remove(user_sessions, Session),
 			NOldRoom:save(),
-			goethe:notify(user_left_room, {NOldRoom, UserName});
-		_ -> ok
+			goethe:notify(user_left_room, {NOldRoom, UserName}),
+			ok;
+		_ -> {error, not_in_room}
 	end.
+
+get_user_list(Room) ->
+	{ok, UserSessions} = Room:get(user_sessions),
+	{ok, lists:map(fun(Session) -> Session:get(name) end, UserSessions)}.

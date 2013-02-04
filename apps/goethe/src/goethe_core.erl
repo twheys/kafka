@@ -18,7 +18,7 @@
 -export([init/1,handle_internal/2,handle_inbound/5,handle_event/3,get_api/1,terminate/2,code_change/3]).
 
 % Module application exports
--export([warn_timeout/1]).
+-export([]).
 
 % Module namespace - Must be an atom.
 -define(NAME, server).
@@ -132,14 +132,15 @@ handle_event('server.client_error', {Session, Blame, Code}, State) ->
 
 handle_event('server.timeout', {Session}, State) ->
     Session:send_msg(
-        {[{<<"client.error">>,
-            {
+        {[{
+            <<"client.error">>,
+            {[
                 {<<"code">>,<<"timeout">>}
-            }
+            ]}
         }]}
     ),
     Session:timeout(),
-    {noreply, State};
+    {ok, State};
 
 handle_event(_Event, _Data, _State) -> no_match.
 

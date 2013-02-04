@@ -1,25 +1,23 @@
 -module(goethe_principle, [Id,Rev,Name,Email,Password,IsAdmin]).
 -author('Tim Heys twheys@gmail.com').
+-behaviour(goethe_entity).
 
--export([new/1,new/3,get/1,set/2,add/2,remove/2,save/0,delete/0]).
+% default exports
+-export([new/1,get/1,set/2,add/2,remove/2,save/0,delete/0,json/0]).
+
+% public constructor
+-export([new/3]).
 
 -define(ID, <<"_id">>).
 -define(REV, <<"_rev">>).
+-define(TYPE, <<"auth">>).
 -define(NAME, <<"name">>).
 -define(EMAIL, <<"email">>).
 -define(PASSWORD, <<"password">>).
 -define(IS_ADMIN, <<"is_admin">>).
 
-% [{<<"_id">>,Id},
-%		{<<"_rev">>,_},
-%		{<<"name">>,Name},
-%		{<<"email">>,Email},
-%		{<<"password">>,Password},
-%		{<<"is_admin">>,IsAdmin},
-%		{<<"created">>,_},
-%		{<<"updated">>,_},
-%		{<<"g_type">>,<<"auth">>}]
 new({Json}) when is_list(Json) ->
+    ?TYPE = proplists:get_value(<<"g_type">>, Json),
 	Id = proplists:get_value(?ID, Json),
 	Rev = proplists:get_value(?REV, Json),
 	Name = proplists:get_value(?NAME, Json),
@@ -32,15 +30,8 @@ new(Id,Rev,Name,Email,Password,IsAdmin) -> {?MODULE,Id,Rev,Name,Email,Password,I
 
 
 save() ->
-    {ok, NewId} = goethe:save({[
-	        {?ID,Id},
-	        {?REV,Rev},
-			{?NAME,Name},
-			{?EMAIL,Email},
-			{?PASSWORD,Password},
-			{?IS_ADMIN,IsAdmin},
-			{<<"g_type">>,<<"auth">>}]}),
-	new(NewId, Rev, Name, Email, Password, IsAdmin).
+    {ok, WithId} = goethe:save(json()),
+    new(WithId).
 
 
 delete() ->
@@ -59,14 +50,25 @@ get(is_admin) -> {ok, IsAdmin};
 get(_) -> {error, unknown_value}.
 
 set(email, NewEmail) ->
-    {?MODULE,Id,Rev,Name,NewEmail,Password,IsAdmin};
+	new(Id, Rev, NewEmail, Email, Password, IsAdmin);
 set(name, NewName) ->
-    {?MODULE,Id,Rev,Name,Email,NewName,Password,IsAdmin};
+	new(Id, Rev, NewName, Email, Password, IsAdmin);
 set(password, NewPassword) ->
-    {?MODULE,Id,Rev,Name,Email,Name,NewPassword,IsAdmin};
+	new(Id, Rev, Name, Email, NewPassword, IsAdmin);
 set(is_admin, NewIsAdmin) ->
-    {?MODULE,Id,Rev,Name,Email,Name,Password,NewIsAdmin};
+	new(Id, Rev, Name, Email, Password, NewIsAdmin);
 set(_, _) -> {error, unknown_value}.
 
 add(_, _) -> {error, unknown_value}.
 remove(_, _) -> {error, unknown_value}.
+
+json() ->
+    {[
+        {?ID,Id},
+        {?REV,Rev},
+		{?NAME,Name},
+		{?EMAIL,Email},
+		{?PASSWORD,Password},
+		{?IS_ADMIN,IsAdmin},
+		{<<"g_type">>, ?TYPE}
+	]}.

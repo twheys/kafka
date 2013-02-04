@@ -17,7 +17,8 @@
 -export([init/1,handle_call/3,handle_cast/2,handle_info/2,terminate/2,code_change/3]).
 
 -export([recv/3,register_module/1,register_connection/1,release_connection/1,get_modules/0]).
-% public game server functions
+
+% public server functions
 -export([ack/2,ack/3,nack/3,nack/4,notify/2,notify/3,get_session_by_username/1]).
 
 % public db functions
@@ -37,7 +38,7 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%==========================================================================
 %
-%  game server functions
+%  server functions
 %
 %%==========================================================================
 register_module(Module) when is_atom(Module) ->
@@ -49,15 +50,18 @@ release_connection(Connection) when is_pid(Connection) ->
     gen_server:cast(?MODULE, {release_connection, {Connection}}).
 
 recv(_, _, []) -> ok;
-recv(Role, Session, [{Module, Action, Data} | Rest]) -> 
+recv(Role, Session, [{Module, Action, Data} | Rest]) ->
     gen_server:cast(?MODULE, {recv, {Role, {Module, Action, Data}, Session}}),
     recv(Role, Session, Rest).
 
 notify(EventName, Data) ->
     gen_server:cast(?MODULE, {notify, {EventName, Data}}).
 %FIXME need a way of handling default events (events that trigger configurable actions)
-notify(default, EventName, Data) ->
-    gen_server:cast(?MODULE, {notify, {EventName, Data}}).
+notify(default, Key, Data) ->
+    case application:get_env(Key) of
+    undefined -> gen_server:cast(?MODULE, {notify, {Key, Data}});
+    EventName -> gen_server:cast(?MODULE, {notify, {EventName, Data}})
+    end.
 
 get_modules() ->
     gen_server:call(?MODULE, get_modules).

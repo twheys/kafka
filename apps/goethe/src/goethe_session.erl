@@ -1,38 +1,83 @@
--module(goethe_session, [Id,Listener,Principle]).
+-module(goethe_session, [Id,Rev,Listener,Name,Email,IsAdmin]).
 -author('Tim Heys twheys@gmail.com').
+-behaviour(goethe_entity).
+
+% default exports
+-export([new/1,get/1,set/2,add/2,remove/2,save/0,delete/0,json/0]).
+
+% public constructor
+-export([build/1]).
 
 % public socket server functions
 -export([send_msg/1,pencrypt/1,fencrypt/1,auth/1,admin/1,cloud/0,close/0,timeout/0]).
--export([new/1,new/3,get/1,set/2,add/2,remove/2,save/0,delete/0]).
 
-% [{<<"_id">>,Id},
-%  {<<"_rev">>,_},
-%  {<<"proc_id">>,Pid},
-%  {<<"created">>,_},
-%  {<<"updated">>,_},
-%  {<<"g_type">>,<<"auth">>}]
+-define(ID, <<"_id">>).
+-define(REV, <<"_rev">>).
+-define(TYPE, <<"session">>).
+-define(PROC, <<"proc">>).
+-define(NAME, <<"name">>).
+-define(EMAIL, <<"email">>).
+-define(IS_ADMIN, <<"is_admin">>).
+
 new({Json}) when is_list(Json) ->
-    Id = proplists:get_value(<<"_id">>, Json),
-    Pid = proplists:get_value(<<"proc_id">>,Json),
-    new(Id, list_to_pid(binary_to_list(Pid)), {});
-new(Listener) when is_pid(Listener) -> new(nil,Listener,nil).
-new(Id,Listener,Principle) -> {goethe_session,Id,Listener,Principle}.
+    ?TYPE = proplists:get_value(<<"g_type">>, Json),
+    Id = proplists:get_value(?ID, Json),
+    Rev = proplists:get_value(?REV,Json),
+    Pid = proplists:get_value(?PROC,Json),
+    Name = proplists:get_value(?NAME, Json),
+    Email = proplists:get_value(?EMAIL, Json),
+    IsAdmin = proplists:get_value(?IS_ADMIN, Json),
+    new(Id, Rev, list_to_pid(binary_to_list(Pid)), Name, Email, IsAdmin);
+new(Listener) when is_pid(Listener) -> new(nil,nil,Listener,nil,nil,nil).
+new(Id,Rev,Listener,Name,Email,IsAdmin) -> {goethe_session,Id,Rev,Listener,Name,Email,IsAdmin}.
 
-% sessions can only be saved once!!!
 save() ->
-    {ok, UserName} = Principle:get(name),
-    {ok, NewId} = goethe:save({[
-            {<<"_id">>,Id},
-            {<<"_rev">>,nil},
-            {<<"proc_id">>,list_to_binary(pid_to_list(Listener))},
-            {<<"username">>,UserName},
-            {<<"g_type">>,<<"session">>}
-        ]}),
-    new(NewId, Listener, Principle).
+    {ok, WithId} = goethe:save(json()),
+    new(WithId).
 
 
 delete() ->
     ok.
+
+
+%%==========================================================================
+%
+%  public accessor functions
+%
+%%==========================================================================
+get(name) -> {ok, Name};
+get(email) -> {ok, Email};
+get(is_admin) -> {ok, IsAdmin};
+get(_) -> {error, unknown_value}.
+
+set(name, NewName) ->
+    new(Id, Rev, Listener, NewName, Email, IsAdmin);
+set(email, NewEmail) ->
+    new(Id, Rev, Listener, Name, NewEmail, IsAdmin);
+set(is_admin, NewIsAdmin) ->
+    new(Id, Rev, Listener, Name, Email, NewIsAdmin);
+set(_, _) -> {error, unknown_value}.
+
+add(_, _) -> {error, unknown_value}.
+remove(_, _) -> {error, unknown_value}.
+
+json() ->
+    {[
+        {?ID, Id},
+        {?REV, Rev},
+        {?PROC, list_to_binary(pid_to_list(Listener))},
+        {?NAME,Name},
+        {?EMAIL,Email},
+        {?IS_ADMIN,IsAdmin},
+        {<<"g_type">>, ?TYPE}
+    ]}.
+
+build(Principle) ->
+    {ok, NewName} = Principle:get(name),
+    {ok, NewEmail} = Principle:get(email),
+    {ok, NewIsAdmin} = Principle:get(is_admin),
+    new(Id, Rev, Listener, NewName, NewEmail, NewIsAdmin).
+
 
 %%==========================================================================
 %
@@ -61,19 +106,5 @@ close() ->
     Listener ! close,
     ok.
 timeout() ->
-	Listener ! timeout,
+    Listener ! timeout,
     ok.
-
-
-%%==========================================================================
-%
-%  public accessor functions
-%
-%%==========================================================================
-get(principle) -> {ok, Principle}.
-
-set(principle, NewPrinciple) ->
-    {?MODULE,Id,Listener,NewPrinciple}.
-
-add(_, _) -> {error, unknown_value}.
-remove(_, _) -> {error, unknown_value}.

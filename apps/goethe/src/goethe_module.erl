@@ -20,9 +20,8 @@ name,mod,deps=[],nstate
 %  API
 %
 %%==========================================================================
--type principle() :: {goethe_principle, Email :: string(), UserName :: string(), IsAdmin :: boolean()}.
--type session() :: {goethe_session, Listener :: pid(), Principle :: principle() | {}}.
 -type role() :: 'plain' | 'pencrypt' | 'fencrypt' | 'web' | 'auth' | 'admin' | 'cloud'.
+-type session() :: term().
 
 -callback init(Args :: term()) ->
     {ok, State :: term()} | 
@@ -164,7 +163,7 @@ handle_call(Request, _From, State) ->
 
 
 handle_cast({inbound, Role, {Action, Data}, Session}, #state{mod=Mod,nstate=NState} = State) ->
-    case Mod:handle_inbound(Role, Action, Data, Session, NState) of
+    catch case Mod:handle_inbound(Role, Action, Data, Session, NState) of
     {ack, NewNState} ->
         goethe:ack(Session, Action),
         {noreply, State#state{nstate=NewNState}};
@@ -191,7 +190,8 @@ handle_cast({inbound, Role, {Action, Data}, Session}, #state{mod=Mod,nstate=NSta
     no_match ->
         logger:info("Unexpected inbound message in Module: ~p Action: [~p]~p:~p", [Mod, Role, Action, Data]),
         goethe:nack(Session, Action, <<"invalid.action">>),
-        {noreply, State}
+        {noreply, State};
+    Other -> goethe:nack(Session, Action, <<"server.error">>)
     end;
 
 handle_cast({event, {Event, Data}}, #state{mod=Mod,nstate=NState} = State) ->
