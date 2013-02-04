@@ -7,6 +7,7 @@ Erlang game server hopeful
 TODO
 ====
 
+- Figure out development environment
 - Fix chat to use registered chat commands (as functions)
 - Change IsAdmin in Session to Role
 - Remove references to Principle outside of goethe_auth
@@ -18,5 +19,6 @@ TODO
 - Build Messages modules
 - Build Rest API
 - Get Build/Update/Release Script Working
+- Figure out unit testing then write lots and lots of unit tests!!!
 - Create Test server
 - Add dependencies to Modules through goethe

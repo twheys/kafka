@@ -85,13 +85,14 @@ listen(#state{sock=Sock, status=Status, filters=Filters, session=Session} = Stat
 		{write, Tuple} -> write(Tuple, Sock, Filters);
     % End connection
 		{stop, Reason} ->
+			goethe:notify('client.logout', {Session}),
 			Session:delete(),
 			exit({stop, Reason});
 	
 	% State Handlers
 		Message -> common(Status, State, Message)
 	after ?DEFAULT_TIMEOUT ->
-		goethe:notify(server.timeout, {Session})
+		goethe:notify('client.timeout', {Session})
 	end,
 	listen(State).
 

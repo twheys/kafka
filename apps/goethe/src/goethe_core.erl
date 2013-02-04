@@ -130,7 +130,7 @@ handle_event('server.client_error', {Session, Blame, Code}, State) ->
     ),
     {ok, State};
 
-handle_event('server.timeout', {Session}, State) ->
+handle_event('client.timeout', {Session}, State) ->
     Session:send_msg(
         {[{
             <<"client.error">>,
