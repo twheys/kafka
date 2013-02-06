@@ -1,4 +1,4 @@
--module(goethe_principle, [Id,Rev,Name,Email,Password,IsAdmin]).
+-module(goethe_principle, [Id,Rev,Name,Email,Password,Role]).
 -author('Tim Heys twheys@gmail.com').
 -behaviour(goethe_entity).
 
@@ -14,7 +14,7 @@
 -define(NAME, <<"name">>).
 -define(EMAIL, <<"email">>).
 -define(PASSWORD, <<"password">>).
--define(IS_ADMIN, <<"is_admin">>).
+-define(ROLE, <<"role">>).
 
 new({Json}) when is_list(Json) ->
     ?TYPE = proplists:get_value(<<"g_type">>, Json),
@@ -23,10 +23,10 @@ new({Json}) when is_list(Json) ->
 	Name = proplists:get_value(?NAME, Json),
 	Email = proplists:get_value(?EMAIL, Json),
 	Password = proplists:get_value(?PASSWORD, Json),
-	IsAdmin = proplists:get_value(?IS_ADMIN, Json),
-    new(Id, Rev, Name, Email, Password, IsAdmin).
-new(Email,Name,Password) -> new(nil, nil, Name, Email, Password, false).
-new(Id,Rev,Name,Email,Password,IsAdmin) -> {?MODULE,Id,Rev,Name,Email,Password,IsAdmin}.
+	Role = proplists:get_value(?ROLE, Json),
+    new(Id, Rev, Name, Email, Password, Role).
+new(Email,Name,Password) -> new(nil, nil, Name, Email, Password, nil).
+new(Id,Rev,Name,Email,Password,Role) -> {?MODULE,Id,Rev,Name,Email,Password,Role}.
 
 
 save() ->
@@ -46,17 +46,17 @@ delete() ->
 get(email) -> {ok, Email};
 get(name) -> {ok, Name};
 get(password) -> {ok, Password};
-get(is_admin) -> {ok, IsAdmin};
+get(role) -> {ok, Role};
 get(_) -> {error, unknown_value}.
 
 set(email, NewEmail) ->
-	new(Id, Rev, NewEmail, Email, Password, IsAdmin);
+	new(Id, Rev, NewEmail, Email, Password, Role);
 set(name, NewName) ->
-	new(Id, Rev, NewName, Email, Password, IsAdmin);
+	new(Id, Rev, NewName, Email, Password, Role);
 set(password, NewPassword) ->
-	new(Id, Rev, Name, Email, NewPassword, IsAdmin);
-set(is_admin, NewIsAdmin) ->
-	new(Id, Rev, Name, Email, Password, NewIsAdmin);
+	new(Id, Rev, Name, Email, NewPassword, Role);
+set(role, NewRole) ->
+	new(Id, Rev, Name, Email, Password, NewRole);
 set(_, _) -> {error, unknown_value}.
 
 add(_, _) -> {error, unknown_value}.
@@ -69,6 +69,6 @@ json() ->
 		{?NAME,Name},
 		{?EMAIL,Email},
 		{?PASSWORD,Password},
-		{?IS_ADMIN,IsAdmin},
+		{?ROLE,Role},
 		{<<"g_type">>, ?TYPE}
 	]}.

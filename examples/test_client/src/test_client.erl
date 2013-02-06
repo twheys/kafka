@@ -121,7 +121,7 @@ encrypt(Pid, Key) ->
 
 register(Pid, Email, UserName, Password) ->
     Pid ! {send, list_to_binary([
-            <<"{\"auth.register\":{">>,
+            <<"{\"server.register\":{">>,
             <<"\"email\":\"">>, 
             Email, 
             <<"\",">>,
@@ -135,7 +135,7 @@ register(Pid, Email, UserName, Password) ->
 
 login(Pid, UserName, Password) ->
     Pid ! {send, list_to_binary([
-            <<"{\"auth.login\":{">>,
+            <<"{\"server.login\":{">>,
             <<"\"username\":\"">>, 
             UserName, 
             <<"\",">>,

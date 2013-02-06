@@ -76,7 +76,7 @@ accept(LSock, Top) ->
 
 
 listen(#state{sock=Sock, status=Status, filters=Filters, session=Session} = State) ->
-	logger:trace("Listening for read/write orders!"),
+	logger:trace("Listening for [~p] read/write orders!", [Status]),
     inet:setopts(Sock, [{active, once}]),
 	receive
     % Recv tcp/ip messages
@@ -119,37 +119,18 @@ pencrypt(State, {fencrypt, {Key}}) ->
 pencrypt(_, Other) ->
 	common(Other).
 
-
-fencrypt(#state{session=Session} = State, {auth, {Principle}}) ->
-	NSession = Session:build(Principle),
-	PSession = NSession:save(),
-	logger:debug("Persisted Session: ~p", [PSession]),
+fencrypt(#state{session=Session} = State, {ready, {Principle}}) ->
+	NewSession = build_session(Session, Principle),
+	logger:debug("Persisted Session: ~p", [NewSession]),
 	listen(State#state{
-		status=auth,
-		session=PSession
-	});
-fencrypt(#state{session=Session} = State, {admin, {Principle}}) ->
-	logger:info("Admin logging in: ~p", Principle),
-	NSession = Session:build(Principle),
-	PSession = NSession:save(),
-	logger:debug("Persisted Session: ~p", [PSession]),
-	listen(State#state{
-		status=admin,
-		session=PSession
+		status=ready,
+		session=NewSession
 	});
 fencrypt(_, Other) ->
 	common(Other).
 
 
-auth(_, Other) ->
-	common(Other).
-
-
-admin(_, Other) ->
-	common(Other).
-
-
-cloud(_, Other) ->
+ready(_, Other) ->
 	common(Other).
 
 
@@ -170,7 +151,7 @@ write_filter(Msg, [json | Rest]) ->
 			{ok, JSON} ->
 				write_filter(JSON, Rest);
 			{error, Reason} -> 
-			    logger:debug("Failed Outbound: ~p", [Msg]),
+			    logger:debug("Failed to encode JSON: ~p", [Msg]),
 				error(Reason)
 	end;
 write_filter(Msg, [Unknown | Rest]) ->
@@ -209,12 +190,8 @@ common(pencrypt, State, Message) ->
 	pencrypt(State, Message);
 common(fencrypt, State, Message) ->
 	fencrypt(State, Message);
-common(auth, State, Message) ->
-	auth(State, Message);
-common(admin, State, Message) ->
-	admin(State, Message);
-common(cloud, State, Message) ->
-	cloud(State, Message);
+common(ready, State, Message) ->
+	ready(State, Message);
 common(_, _, Message) ->
 	common(Message).
 
@@ -234,3 +211,10 @@ common(timeout) ->
 common(Other) -> 
 	logger:warn("~p", [{inv_sock_action, Other}]),
 	ok.
+
+build_session(Session, Principle) ->
+	{ok, UserName} = Principle:get(name),
+	{ok, Email} = Principle:get(email),
+	{ok, Role} = Principle:get(role),
+	NSession = Session:build(UserName, Email, Role),
+	NSession:save().

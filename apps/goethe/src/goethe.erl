@@ -19,14 +19,10 @@
 -export([recv/3,register_module/1,register_connection/1,release_connection/1,get_modules/0]).
 
 % public server functions
--export([ack/2,ack/3,nack/3,nack/4,notify/2,notify/3,get_session_by_username/1]).
+-export([ack/2,ack/3,nack/3,nack/4,notify/1,notify/2,notify/3,get_session_by_username/1]).
 
 % public db functions
 -export([db/0,get/2,get/3,clean/1,clean/2,save/1,get_enum/1,get_enum/2]).
-
--define(GAME_SERVER_NAME, game_server).
--define(SOCKET_SERVER_NAME, socket_server).
--define(GAME_API_NAME, game_api).
 
 -record(state, {
 procs=0,listener,db,modules=[],connections=[],nodes=[]
@@ -54,6 +50,7 @@ recv(Role, Session, [{Module, Action, Data} | Rest]) ->
     gen_server:cast(?MODULE, {recv, {Role, {Module, Action, Data}, Session}}),
     recv(Role, Session, Rest).
 
+notify(EventName) -> notify(EventName, {}).
 notify(EventName, Data) ->
     gen_server:cast(?MODULE, {notify, {EventName, Data}}).
 %FIXME need a way of handling default events (events that trigger configurable actions)
@@ -210,10 +207,22 @@ handle_call(Request, _From, State) ->
     {reply, inv_call, State}.
 
 
-handle_cast({recv, {Role, {Module, Action, Data}, Session}}, #state{modules=_Modules} = State) ->
-    % TODO check if Module is loaded.
-    logger:debug("[~p]Action: ~p.~p:~p", [Role, Module, Action, Data]),
-    spawn(goethe_module, inbound, [Module, Role, {Action, Data}, Session]),
+handle_cast({recv, {ready, {Module, Action, Data}, Session}}, #state{modules=_Modules} = State) ->
+    logger:debug("Action: ~p.~p:~p", [Module, Action, Data]),
+    spawn(goethe_module, inbound, [Module, {Action, Data}, Session]),
+    {noreply, State};
+
+handle_cast({recv, {ConnectionStatus, {_, Action, Data}, Session}}, #state{modules=_Modules} = State) ->
+    logger:debug("Preliminary Action: ~p.~p:~p", [server, Action, Data]),
+    if 
+        encrypt == Action, pencrypt =/= ConnectionStatus ->
+            spawn(goethe_module, inbound, [server, {unauthorized, {}}, Session]);
+
+        (register == Action orelse login == Action), fencrypt =/= ConnectionStatus ->
+            spawn(goethe_module, inbound, [server, {unauthorized, {}}, Session]);
+        
+        true -> spawn(goethe_module, inbound, [server, {Action, Data}, Session])
+    end,
     {noreply, State};
 
 handle_cast({register_module, {Module}}, #state{modules=Modules} = State) ->

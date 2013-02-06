@@ -1,4 +1,4 @@
--module(goethe_session, [Id,Rev,Listener,Name,Email,IsAdmin]).
+-module(goethe_session, [Id,Rev,Listener,Name,Email,Role]).
 -author('Tim Heys twheys@gmail.com').
 -behaviour(goethe_entity).
 
@@ -6,10 +6,15 @@
 -export([new/1,get/1,set/2,add/2,remove/2,save/0,delete/0,json/0]).
 
 % public constructor
--export([build/1]).
+-export([build/3]).
 
 % public socket server functions
--export([send_msg/1,pencrypt/1,fencrypt/1,auth/1,admin/1,cloud/0,close/0,timeout/0]).
+-export([send_msg/1,
+         pencrypt/1,
+         fencrypt/1,
+         ready/1,
+         close/0,
+         timeout/0]).
 
 -define(ID, <<"_id">>).
 -define(REV, <<"_rev">>).
@@ -17,7 +22,7 @@
 -define(PROC, <<"proc">>).
 -define(NAME, <<"name">>).
 -define(EMAIL, <<"email">>).
--define(IS_ADMIN, <<"is_admin">>).
+-define(ROLE, <<"role">>).
 
 new({Json}) when is_list(Json) ->
     ?TYPE = proplists:get_value(<<"g_type">>, Json),
@@ -26,10 +31,10 @@ new({Json}) when is_list(Json) ->
     Pid = proplists:get_value(?PROC,Json),
     Name = proplists:get_value(?NAME, Json),
     Email = proplists:get_value(?EMAIL, Json),
-    IsAdmin = proplists:get_value(?IS_ADMIN, Json),
-    new(Id, Rev, list_to_pid(binary_to_list(Pid)), Name, Email, IsAdmin);
+    Role = proplists:get_value(?ROLE, Json),
+    new(Id, Rev, list_to_pid(binary_to_list(Pid)), Name, Email, Role);
 new(Listener) when is_pid(Listener) -> new(nil,nil,Listener,nil,nil,nil).
-new(Id,Rev,Listener,Name,Email,IsAdmin) -> {goethe_session,Id,Rev,Listener,Name,Email,IsAdmin}.
+new(Id,Rev,Listener,Name,Email,Role) -> {goethe_session,Id,Rev,Listener,Name,Email,Role}.
 
 save() ->
     {ok, WithId} = goethe:save(json()),
@@ -47,15 +52,15 @@ delete() ->
 %%==========================================================================
 get(name) -> {ok, Name};
 get(email) -> {ok, Email};
-get(is_admin) -> {ok, IsAdmin};
+get(role) -> {ok, Role};
 get(_) -> {error, unknown_value}.
 
 set(name, NewName) ->
-    new(Id, Rev, Listener, NewName, Email, IsAdmin);
+    new(Id, Rev, Listener, NewName, Email, Role);
 set(email, NewEmail) ->
-    new(Id, Rev, Listener, Name, NewEmail, IsAdmin);
-set(is_admin, NewIsAdmin) ->
-    new(Id, Rev, Listener, Name, Email, NewIsAdmin);
+    new(Id, Rev, Listener, Name, NewEmail, Role);
+set(role, NewRole) ->
+    new(Id, Rev, Listener, Name, Email, NewRole);
 set(_, _) -> {error, unknown_value}.
 
 add(_, _) -> {error, unknown_value}.
@@ -68,15 +73,12 @@ json() ->
         {?PROC, list_to_binary(pid_to_list(Listener))},
         {?NAME,Name},
         {?EMAIL,Email},
-        {?IS_ADMIN,IsAdmin},
+        {?ROLE,Role},
         {<<"g_type">>, ?TYPE}
     ]}.
 
-build(Principle) ->
-    {ok, NewName} = Principle:get(name),
-    {ok, NewEmail} = Principle:get(email),
-    {ok, NewIsAdmin} = Principle:get(is_admin),
-    new(Id, Rev, Listener, NewName, NewEmail, NewIsAdmin).
+build(NewName, NewEmail, NewRole) ->
+    new(Id, Rev, Listener, NewName, NewEmail, NewRole).
 
 
 %%==========================================================================
@@ -93,14 +95,8 @@ pencrypt(PrivKey) ->
 fencrypt(Key) -> 
     Listener ! {fencrypt, {Key}},
     ok.
-auth(NewPrinciple) -> 
-    Listener ! {auth, {NewPrinciple}},
-    ok.
-admin(NewPrinciple) -> 
-    Listener ! {admin, {NewPrinciple}},
-    ok.
-cloud() -> 
-    Listener ! cloud,
+ready(NewPrinciple) -> 
+    Listener ! {ready, {NewPrinciple}},
     ok.
 close() ->
     Listener ! close,
