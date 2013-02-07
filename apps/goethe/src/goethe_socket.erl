@@ -85,7 +85,7 @@ listen(#state{sock=Sock, status=Status, filters=Filters, session=Session} = Stat
 		{write, Tuple} -> write(Tuple, Sock, Filters);
     % End connection
 		{stop, Reason} ->
-			goethe:notify('client.logout', {Session}),
+			goethe_core:send_logout_notification(Session),
 			Session:delete(),
 			exit({stop, Reason});
 	
@@ -122,6 +122,7 @@ pencrypt(_, Other) ->
 fencrypt(#state{session=Session} = State, {ready, {Principle}}) ->
 	NewSession = build_session(Session, Principle),
 	logger:debug("Persisted Session: ~p", [NewSession]),
+    goethe_core:send_login_notification(Session),
 	listen(State#state{
 		status=ready,
 		session=NewSession

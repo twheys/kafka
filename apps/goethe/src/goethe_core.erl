@@ -18,7 +18,9 @@
 -export([init/1,handle_internal/2,handle_inbound/4,handle_event/3,terminate/2,code_change/3]).
 
 % Module application exports
--export([is_admin/1]).
+-export([is_admin/1,
+         send_login_notification/1,
+         send_logout_notification/1]).
 
 % Module namespace - Must be an atom.
 -define(NAME, server).
@@ -68,6 +70,8 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %
 %%==========================================================================
 is_admin(Role) -> goethe_module:internal(?NAME, {is_admin, {Role}}).
+send_login_notification(Session) -> goethe_module:internal(?NAME, {login_notice, {Session}}).
+send_logout_notification(Session) -> goethe_module:internal(?NAME, {logout_notice, {Session}}).
 
 
 %%==========================================================================
@@ -78,6 +82,24 @@ is_admin(Role) -> goethe_module:internal(?NAME, {is_admin, {Role}}).
 %%==========================================================================
 handle_internal({is_admin, {Role}}, #state{auth=Auth} = State) ->
     {reply, Auth:is_admin(Role), State};
+
+handle_internal({login_notice, {Session}}, #state{auth=Auth} = State) ->
+    {ok, Role} = Session:get(role),
+    case Auth:is_admin(Role) of
+        true -> goethe:notify(admin_login, {Session});
+        _ -> ok
+    end,
+    goethe:notify(client_login, {Session}),
+    {reply, ok, State};
+
+handle_internal({logout_notice, {Session}}, #state{auth=Auth} = State) ->
+    {ok, Role} = Session:get(role),
+    case Auth:is_admin(Role) of
+        true -> goethe:notify(admin_logout, {Session});
+        _ -> ok
+    end,
+    goethe:notify(client_logout, {Session}),
+    {reply, ok, State};
 
 handle_internal(_Request, _State) -> no_match.
 
@@ -210,11 +232,6 @@ do_register(Auth, Email, UserName, Password, State) ->
 do_auth(Auth, IdType, IdToken, Password, Session, State) ->
 	case Auth:login(IdType, {IdToken, Password}) of
 		 {ok, Principle} ->
-			{ok, Role} = Principle:get(role),
-            case Auth:is_admin(Role) of
-                true -> goethe:notify(helper_login, {Session});
-                _ -> goethe:notify(login, {Session})
-            end,
 			{ok, UserName} = Principle:get(name),
 			goethe:ack(Session, <<"server.login">>, [{<<"welcome">>, UserName}]),
             Session:ready(Principle),

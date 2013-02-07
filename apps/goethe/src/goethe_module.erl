@@ -175,6 +175,10 @@ handle_cast({inbound, {Action, Data}, Session}, #state{mod=Mod,nstate=NState} = 
 		goethe:nack(Session, Action, <<"server_error">>)
     end;
 
+handle_cast({event, {reload, {core}}}, #state{name=Name} = State) ->
+    goethe:register_module(Name),
+    {noreply, State};
+
 handle_cast({event, {Event, Data}}, #state{mod=Mod,nstate=NState} = State) ->
     case Mod:handle_event(Event, Data, NState) of
     {ok, NewNState} -> {noreply, State#state{nstate=NewNState}};
@@ -190,6 +194,6 @@ handle_cast(Request, State) ->
 
 handle_info(_Info, State) -> {noreply, State}.
 terminate(Reason, #state{mod=Mod,nstate=NState}) -> Mod:terminate(Reason, NState).
-code_change(OldVsn, #state{mod=Mod,nstate=NState} = State, Extra) -> 
+code_change(OldVsn, #state{mod=Mod,nstate=NState} = State, Extra) ->
     {ok, NewNState} = Mod:code_change(OldVsn, NState, Extra),
     {ok, State#state{nstate=NewNState}}.
