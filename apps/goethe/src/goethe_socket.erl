@@ -26,7 +26,6 @@ start_link(Port) -> spawn_link(fun() -> init(Port, ?TCP_OPTIONS) end).
 %
 %%==========================================================================	
 init(Port, TcpOptions) ->
-    goethe:clean({"session", "all"}),
     case gen_tcp:listen(Port, TcpOptions) of
 	{ok, Sock} ->
 		logger:info("Socket Server on port ~p successfully initialized!", [Port]),

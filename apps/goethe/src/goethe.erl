@@ -267,11 +267,22 @@ handle_cast(Request, State) ->
     logger:info("Unexpected function cast in goethe: ~p", [Request]),
     {noreply, State}.
 
-    
+
 handle_info(_Info, State) -> {noreply, State}.
-terminate(Reason, #state{listener=Listener,db=_Db,modules=Modules}) ->
+terminate(Reason, #state{listener=Listener,db=Db,modules=Modules}) ->
     logger:info("Received shut down hook. Reason: ~p. Stopping socket server.", [Reason]),
+    % Stop listening
     Listener ! stop,
+    
+    % Clean Sessions in DB
+    try couchbeam_view:fold(
+        fun({[{<<"id">>,_},{<<"key">>,_},{<<"value">>,Value}]}, Acc) ->
+            [Value|Acc]
+        end, Db, "session", "all", [])
+    catch _ -> ignore
+    end,
+    
+    % Notify modules of Core termnating
     do_notify(Modules, reload, {server}),
     ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
