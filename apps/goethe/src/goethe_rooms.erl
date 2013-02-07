@@ -1,10 +1,3 @@
-%===========================================================================
-%
-%
-% @type session() = term().
-% @type role() = 'plain' | 'pencrypt' | 'fencrypt' | 'auth' | 'admin' | 'cloud'.
-%
-%===========================================================================
 -module(goethe_rooms).
 -author('twheys@gmail.com').
 -behaviour(goethe_module).
@@ -54,6 +47,9 @@ init(_Args) ->
     		Goethe = goethe_room:new(<<"Goethe">>),
     		Goethe:save();
 		true -> ok
+	end,
+	case catch init_room_chat() of
+		_ -> ok % ignore
 	end,
 	{ok, #state{roomnames=RoomNames}}.
 terminate(_Reason, _State) -> normal.
@@ -130,7 +126,7 @@ handle_inbound(leave, {}, Session, State) ->
 handle_inbound(_Action, _Data, _Session, _State) -> no_match.
 
 
-%%==========================================================================
+%===========================================================================
 %
 %  events api
 %    Public API for Events. These functions are called when the expected
@@ -138,21 +134,25 @@ handle_inbound(_Action, _Data, _Session, _State) -> no_match.
 %
 %===========================================================================
 handle_event(module_ready, {goethe_chat}, State) ->
-    logger:info("Loading room chat."),
-	RoomChat = fun("/r " ++ Body, From, Role) when 0 < length(Body) ->
-			send_room_chat(Body, From, Role)
-		end,
-	goethe_chat:add_handler(room_chat, RoomChat),
+    init_room_chat(),
     {ok, State};
 
 handle_event(_Event, _Data, _State) -> no_match.
 
 
-%%==========================================================================
+%===========================================================================
 %
 %  util functions
 %
-%%==========================================================================
+%===========================================================================
+init_room_chat() ->
+	logger:info("Loading room chat."),
+	RoomChat = fun("/r " ++ Body, From, Role) when 0 < length(Body) ->
+			send_room_chat(Body, From, Role)
+		end,
+	goethe_chat:add_handler(room_chat, RoomChat),
+	ok.
+
 validate_room_join(Session, Room) ->
 	{ok, UserSessions} = Room:get(user_sessions),
 	{ok, MaxUsers} = Room:get(max_users),

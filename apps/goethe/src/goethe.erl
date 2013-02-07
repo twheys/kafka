@@ -168,9 +168,10 @@ handle_call({save, {
     {[{<<"_id">>,nil} | [{<<"_rev">>,nil} | Doc]]}
         }}, _From, #state{db=Db} = State) ->
     logger:debug("Persisting new Entity ~p", [Doc]),
+	Now = timestamp(),
     Reply = case couchbeam:save_doc(Db, {
-            [{<<"created">>,<<"now">>} |
-            [{<<"updated">>,<<"now">>} |
+            [{<<"created">>,Now} |
+            [{<<"updated">>,Now} |
             Doc
         ]]}) of
         {ok, NewId} -> {ok, NewId};
@@ -180,8 +181,9 @@ handle_call({save, {
 
 handle_call({save, {{Doc}}}, _From, #state{db=Db} = State) ->
     logger:debug("Persisting existing Entity ~p", [Doc]),
+	Now = timestamp(),
     Reply = case couchbeam:save_doc(Db, {[
-            {<<"updated">>,<<"now">>} |
+            {<<"updated">>,Now} |
             Doc
         ]}) of
         {ok, NewId} -> {ok, NewId};
@@ -281,3 +283,15 @@ terminate(Reason, #state{listener=Listener,db=_Db}) ->
     Listener ! stop,
     ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
+
+
+%%==========================================================================
+%
+%  util functions
+%
+%%==========================================================================
+timestamp() ->
+	{{Year,Month,Day},{Hour,Min,Sec}} = calendar:local_time(),
+	String = lists:flatten(io_lib:fwrite("~4..0B-~2..0B-~2..0BT~2B:~2.10.0B:~2.10.0B",
+                      [Year, Month, Day, Hour, Min, Sec])),
+	list_to_binary(String).

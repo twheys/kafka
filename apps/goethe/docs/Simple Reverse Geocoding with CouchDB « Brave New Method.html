@@ -1,0 +1,1102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head profile="http://gmpg.org/xfn/11"><script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/count.bin" async="true" type="text/javascript"></script><link href="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/buttons3.css" type="text/css" rel="stylesheet">
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Simple Reverse Geocoding with CouchDB « Brave New Method</title>
+
+<link rel="stylesheet" href="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/style.css" type="text/css" media="screen">
+
+<link rel="pingback" href="http://bravenewmethod.wordpress.com/xmlrpc.php">
+
+<script type="text/javascript" async="" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/quant.js"></script><script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/buttons.js" async="" type="text/javascript"></script><script type="text/javascript">
+(function() {
+	var s = document.createElement('SCRIPT'), s1 = document.getElementsByTagName('SCRIPT')[0];
+	s.type = 'text/javascript';
+	s.async = true;
+	s.src = 'http://widgets.digg.com/buttons.js';
+	s1.parentNode.insertBefore(s, s1);
+})();
+</script>
+<link rel="alternate" type="application/rss+xml" title="Brave New Method » Feed" href="http://bravenewmethod.wordpress.com/feed/">
+<link rel="alternate" type="application/rss+xml" title="Brave New Method » Comments Feed" href="http://bravenewmethod.wordpress.com/comments/feed/">
+<link rel="alternate" type="application/rss+xml" title="Brave New Method » Simple Reverse Geocoding with&nbsp;CouchDB Comments Feed" href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/feed/">
+<script type="text/javascript">
+/* <![CDATA[ */
+function addLoadEvent(func){var oldonload=window.onload;if(typeof window.onload!='function'){window.onload=func;}else{window.onload=function(){oldonload();func();}}}
+/* ]]> */
+</script>
+<link rel="stylesheet" id="all-css-0" href="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/a.css" type="text/css" media="all">
+<script type="text/javascript">
+/* <![CDATA[ */
+var LoggedOutFollow = {"invalid_email":"Your subscription did not succeed, please try again with a valid email address."};
+/* ]]> */
+</script>
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/a.js"></script>
+<link rel="stylesheet" id="all-css-0" href="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/style_002.css" type="text/css" media="all">
+<!--[if lt IE 8]>
+<link rel='stylesheet' id='highlander-comments-ie7-css'  href='http://s2.wp.com/wp-content/mu-plugins/highlander-comments/style-ie7.css?m=1351637563g&#038;ver=20110606' type='text/css' media='all' />
+<![endif]-->
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://bravenewmethod.wordpress.com/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://bravenewmethod.wordpress.com/wp-includes/wlwmanifest.xml"> 
+<link rel="next" title="Apple Push Notifications with&nbsp;Node.js" href="http://bravenewmethod.wordpress.com/2010/12/09/apple-push-notifications-with-node-js/">
+<meta name="generator" content="WordPress.com">
+<link rel="canonical" href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/">
+<link rel="shortlink" href="http://wp.me/p1e5Le-4">
+<link rel="alternate" type="application/json+oembed" href="http://public-api.wordpress.com/oembed/1.0/?format=json&amp;url=http%3A%2F%2Fbravenewmethod.wordpress.com%2F2010%2F12%2F02%2Fsimple-reverse-geocoding-with-couchdb%2F&amp;for=wpcom-auto-discovery"><link rel="alternate" type="application/xml+oembed" href="http://public-api.wordpress.com/oembed/1.0/?format=xml&amp;url=http%3A%2F%2Fbravenewmethod.wordpress.com%2F2010%2F12%2F02%2Fsimple-reverse-geocoding-with-couchdb%2F&amp;for=wpcom-auto-discovery">
+<!-- Jetpack Open Graph Tags -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="Simple Reverse Geocoding with CouchDB">
+<meta property="og:url" content="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/">
+<meta property="og:description" content="Real world reverse geocoding searches require minimum of three parameters, two&nbsp; for location (lat, lon) and a filter. Filter can be keyword, type of location, name or&nbsp; something else. Common use ca...">
+<meta property="og:site_name" content="Brave New Method">
+<meta name="twitter:site" content="@wordpressdotcom">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:creator" content="@kunteemu">
+<meta property="fb:app_id" content="249643311490">
+<link rel="shortcut icon" type="image/x-icon" href="http://s2.wp.com/i/favicon.ico?m=1311975824g" sizes="16x16 24x24 32x32 48x48">
+<link rel="icon" type="image/x-icon" href="http://s2.wp.com/i/favicon.ico?m=1311975824g" sizes="16x16 24x24 32x32 48x48">
+<link rel="apple-touch-icon-precomposed" href="http://s0.wp.com/i/webclip.png?m=1355642671g">
+<link rel="openid.server" href="http://bravenewmethod.wordpress.com/?openidserver=1">
+<link rel="openid.delegate" href="http://bravenewmethod.wordpress.com/">
+<link rel="search" type="application/opensearchdescription+xml" href="http://bravenewmethod.wordpress.com/osd.xml" title="Brave New Method">
+<link rel="search" type="application/opensearchdescription+xml" href="http://wordpress.com/opensearch.xml" title="WordPress.com">
+		<style>
+		/* <![CDATA[ */
+		/* Block: reblog */
+		
+		.reblog-from img                   { margin: 0 10px 0 0; vertical-align: middle; padding: 0; border: 0; }
+		.reblogger-note img.avatar         { float: left; padding: 0; border: 0; }
+		.reblogger-note-content            { margin: 0 0 20px; }
+		.reblog-post .wpcom-enhanced-excerpt-content { border-left: 3px solid #eee; padding-left: 15px; }
+		.reblog-post ul.thumb-list         { display: block; list-style: none; margin: 2px 0; padding: 0; clear: both; }
+		.reblog-post ul.thumb-list li      { display: inline; margin: 0; padding: 0 1px; border: 0; }
+		.reblog-post ul.thumb-list li a    { margin: 0; padding: 0; border: 0; }
+		.reblog-post ul.thumb-list li img  { margin: 0; padding: 0; border: 0; }
+		
+		.reblog-post .wpcom-enhanced-excerpt { clear: both; }
+		
+		.reblog-post .wpcom-enhanced-excerpt address,
+		.reblog-post .wpcom-enhanced-excerpt li,
+		.reblog-post .wpcom-enhanced-excerpt h1,
+		.reblog-post .wpcom-enhanced-excerpt h2,
+		.reblog-post .wpcom-enhanced-excerpt h3,
+		.reblog-post .wpcom-enhanced-excerpt h4,
+		.reblog-post .wpcom-enhanced-excerpt h5,
+		.reblog-post .wpcom-enhanced-excerpt h6,
+		.reblog-post .wpcom-enhanced-excerpt p { font-size: 100% !important; }
+		
+		.reblog-post .wpcom-enhanced-excerpt blockquote,
+		.reblog-post .wpcom-enhanced-excerpt pre,
+		.reblog-post .wpcom-enhanced-excerpt code,
+		.reblog-post .wpcom-enhanced-excerpt q { font-size: 98% !important; }
+		
+
+		/* ]]> */
+		</style>
+		<meta name="application-name" content="Brave New Method"><meta name="msapplication-window" content="width=device-width;height=device-height"><meta name="msapplication-tooltip" content="Technology tryouts"><meta name="msapplication-task" content="name=Subscribe;action-uri=http://bravenewmethod.wordpress.com/feed/;icon-uri=http://s2.wp.com/i/favicon.ico"><meta name="msapplication-task" content="name=Sign up for a free blog;action-uri=http://wordpress.com/signup/;icon-uri=http://s2.wp.com/i/favicon.ico"><meta name="msapplication-task" content="name=WordPress.com Support;action-uri=http://support.wordpress.com/;icon-uri=http://s2.wp.com/i/favicon.ico"><meta name="msapplication-task" content="name=WordPress.com Forums;action-uri=http://forums.wordpress.com/;icon-uri=http://s2.wp.com/i/favicon.ico"><meta name="title" content="Simple Reverse Geocoding with&nbsp;CouchDB | Brave New Method on WordPress.com">
+<meta name="description" content="Real world reverse geocoding searches require minimum of three parameters, two&nbsp; for location (lat, lon) and a filter. Filter can be keyword, type of location, name or&nbsp; something else. Common use case is to find nearest restaurants or closest address. This kind of query is simple for relational database (though not necessarily easy to shard)…">
+		<style type="text/css">
+			#header h1,
+			#header h1 a,
+			#header h1 a:visited,
+			#header h4,
+			#header h4 a,
+			#header h4 a:visited,
+			.header-left {
+				color: #333333;
+			}
+		</style>
+
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/google_service.js">
+</script>
+<script type="text/javascript">
+GS_googleAddAdSenseService("ca-pub-3443918307802676");
+GS_googleEnableAllServices();
+</script><script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/google_ads.js"></script>
+<script type="text/javascript">
+GA_googleAddSlot("ca-pub-3443918307802676", "wpcom_below_post");
+</script>
+<script type="text/javascript">
+GA_googleFetchAds();
+</script>
+<script type="text/javascript"> 
+	window.google_analytics_uacct = "UA-52447-2"; 
+</script>
+
+<script type="text/javascript">
+	var _gaq = _gaq || [];
+	_gaq.push(['_setAccount', 'UA-52447-2']);
+	_gaq.push(['_setDomainName', 'wordpress.com']);
+	_gaq.push(['_initData']);
+	_gaq.push(['_trackPageview']);
+
+	(function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ga);
+	})();
+</script><script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/ga.js" async="" type="text/javascript"></script>
+
+<script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/osd.js" type="text/javascript"></script><link rel="stylesheet" type="text/css" id="gravatar-card-css" href="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/hovercard.css"><link rel="stylesheet" type="text/css" id="gravatar-card-services-css" href="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/services.css"></head>
+
+<body class="single single-post postid-4 single-format-standard highlander-enabled highlander-light">
+
+<div id="header">
+    <div class="header-left">
+                    <h4><a href="http://bravenewmethod.wordpress.com/">Brave New Method</a></h4>
+                <p id="description">Technology tryouts</p>
+    </div>
+    <div class="header-right">
+        <form method="get" id="searchform" action="http://bravenewmethod.wordpress.com/">
+            <div><label class="hidden" for="s">Search:</label>
+            <input name="s" id="s" type="text">
+            <input id="searchsubmit" value="Go" type="submit"></div>
+        </form>
+    </div>
+</div>
+<div id="access">
+	<div id="nav">
+	    <div id="supernav" class="navleft nav">
+			<div class="menu"><ul><li><a href="http://bravenewmethod.wordpress.com/" title="Home">Home</a></li><li class="page_item page-item-2"><a href="http://bravenewmethod.wordpress.com/about/">About</a></li></ul></div>
+	    </div>
+	    <div class="navright">
+	        <a class="rsslink" rel="nofollow" href="http://bravenewmethod.wordpress.com/feed/">Posts</a>
+	        <a class="rsslink" rel="nofollow" href="http://bravenewmethod.wordpress.com/comments/feed/">Comments</a>
+	    </div>
+	</div>
+
+	<div id="subnav" class="subnav nav">
+			<div class="menu">
+		<ul>
+				<li class="cat-item cat-item-457"><a href="http://bravenewmethod.wordpress.com/category/javascript/" title="Javascript with Node.js">Javascript</a>
+</li>
+	<li class="cat-item cat-item-15550"><a href="http://bravenewmethod.wordpress.com/category/experimental/" title="Approach problem with unconventional way">Experimental</a>
+</li>
+	<li class="cat-item cat-item-1"><a href="http://bravenewmethod.wordpress.com/category/uncategorized/" title="View all posts filed under Uncategorized">Uncategorized</a>
+</li>
+	<li class="cat-item cat-item-53242"><a href="http://bravenewmethod.wordpress.com/category/html5/" title="View all posts filed under html5">html5</a>
+</li>
+		</ul>
+	</div>
+	</div>
+</div>
+
+<div id="wrap">
+<div id="content">
+
+	<div id="content-left">
+
+		
+			<div id="nav-above">
+				<div class="nav-previous"></div>
+				<div class="nav-next"><a href="http://bravenewmethod.wordpress.com/2010/12/09/apple-push-notifications-with-node-js/" rel="next">Apple Push Notifications with&nbsp;Node.js <span class="meta-nav">→</span></a></div>
+			</div>
+
+			<div class="post-4 post type-post status-publish format-standard hentry category-experimental">
+
+				<div class="entry">
+
+					<h1>Simple Reverse Geocoding with&nbsp;CouchDB</h1>
+
+					<div class="post-info">
+						<p>
+							<span class="time">December 2, 2010</span>
+																						<span class="post-comments"><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#comments" title="Comment on Simple Reverse Geocoding with&nbsp;CouchDB">5 Comments</a></span>
+																				</p>
+					</div>
+
+					<p>Real world reverse geocoding searches require minimum of three 
+parameters, two&nbsp; for location (lat, lon) and a filter. Filter can 
+be keyword, type of location, name or&nbsp; something else. Common use 
+case is to find nearest restaurants or closest address. This kind of 
+query is simple for relational database (though not necessarily easy to 
+shard) and the problem has been solved cleanly in many of them. 
+(PostGIS, MySQL Spatial extensions, ..)</p>
+<p>Geocoding is trickier to implement in typical NoSQL database that 
+supports only one dimensional key range queries. Geohashes are classical
+ solution, but in my experience they are too inaccurate for dense data. 
+Simple method that works quite well are geoboxes, where earth is divided
+ to grid that is used as index lookup table. Every location maps to a 
+box that can be addressed with unique id.</p>
+<p>This is experiment to implement simple geobox based geocoding on 
+CouchDB from scratch. I assume you’re already familiar with CouchDB 
+basics. The examples here are written with Python with couchdb-python 
+client library.</p>
+<h2>1. Preparations</h2>
+<p>First we need geobox function that quantizes location coordinates to a
+ list of boxes. Boxes cover the earth as grid. Latitude and location are
+ quantized to coordinates that present geobox center on desired 
+resolution.</p>
+<pre>from decimal import Decimal as D
+D1 = D('1')
+def geobox(lat, lng, res):
+  def _q(c):
+      return (c / res).quantize(D1) * res
+  return (_q(lat), _q(lng))</pre>
+<p>Based on this function, we define a function that computes the geobox and its neighbors and retuns list of strings.</p>
+<pre>import math
+def geonbr(lat, lon, res):
+   blat,blon = geobox(lat, lon, res)
+   boxes = [(dlat, dlon)
+            for dlon in [blon - res, blon, blon + res]
+            for dlat in [blat - res, blat, blat + res]]
+   def _bf(box):
+       (dlat, dlon) = box
+       return math.fabs(dlon - lon) &lt; float(res)*0.8 \
+              and math.fabs(dlat - lat) &lt; float(res)*0.8
+   return filter(_bf, boxes)
+
+def geoboxes(lat, lon, res):
+   return list(set(['#'.join([dlat, dlon])
+                    for (dlat, dlon) in geonbr(lat, lon, res)]))</pre>
+<p>The constant 0.8 defines how close the location can be at the geobox border before we include neighbor box in the list.</p>
+<p>For example, calling geoboxes with lat lon (32.1234, -74.23233) will 
+yield following geoboxes. Numbers are handled as Decimal instances to 
+avoid float rounding problems.</p>
+<pre>&gt;&gt;&gt; from decimal import Decimal as D
+&gt;&gt;&gt; geoboxes(D('32.1234'), D('-74.23233'), D('0.05'))
+['32.15#-74.20', '32.10#-74.20', '32.15#-74.25', '32.10#-74.25'</pre>
+<h2>2. Data Import</h2>
+<p>Data can be anything with location and some keyword, so let's use 
+real world places. Place name will be our searchable term in this 
+example.</p>
+<p><a href="http://geonames.org/">Geonames.org</a> geocoding service 
+makes its data available for everyone. Find here country you want and 
+download &amp; unpack selected data file. I did use 'FI.zip'.</p>
+<p><a href="http://download.geonames.org/export/dump/">http://download.geonames.org/export/dump/</a></p>
+<p>Data is tab-delimited and line-separated. We need to define few helper functions for reading and importing it.</p>
+<pre>from decimal import Decimal as D
+
+def place_dict(entry):
+   return {'_id': entry[0],
+      'name': entry[1].encode('utf-8'),
+      'areas': entry[17].encode('utf-8').split('/'),
+      'loc': {
+      'lat': entry[4],
+      'lon': entry[5],
+    },
+    'gboxes': geobox(D(entry[4]), D(entry[5]), D('0.05'))
+ }
+
+def readnlines(f, n):
+    while True:
+      l = f.readline()
+      if not l:
+         break
+      yield [l] + [f.readline() for _ in range(1, n)]</pre>
+<p>The place_dict converts line from Geonames dump file to JSON 
+document&nbsp; for CouchDB. The readnlines is just helper to make 
+updates in batches. Geobox resolution is 0.05 that makes roughly 5 x 5 
+km geoboxes.</p>
+<p>Then just load the data to database. First we create database in 
+server, open the utf-8 encoded file and write it as batches to the 
+CouchDB.</p>
+<pre>&gt;&gt;&gt;import codecs
+&gt;&gt;&gt;import couchdb
+&gt;&gt;&gt;s = couchdb.Server()
+&gt;&gt;&gt;places = couchdb.create('places')
+&gt;&gt;&gt;f = codecs.open('/home/user/Downloads/FI.txt', encoding='utf-8')
+&gt;&gt;&gt;for batch in readnlines(f, 100):
+...   batch = [l.split('\t') for l in batch]
+...   places.update([place_dict(entry) for entry in batch])
+[(True, '631542', '1-239590f242b46d45b33516687c0b1df3'), ...</pre>
+<p>This takes a few moments. You can follow the progress on&nbsp; CouchDB Futon: <a href="http://localhost:5984/_utils/index.html">http://localhost:5984/_utils/index.html</a></p>
+<p>The place_dict does not validate the content, so the import might 
+stop at broken line in the dump file, in that case you need to filter 
+out the offending lines and rerun.</p>
+<p>Query few places by id and verify that the data really is there and has right format</p>
+<pre>&gt;&gt;&gt; places['638155']
+&lt;Document '638155'@'1-174cbb83a2794c33c40645ddf681fc76'
+{'gboxes': ['66.85#25.75', '66.90#25.75'],
+'loc': {'lat': '66.88333', 'lon': '25.7534'}, 'name': 'Saittajoki',
+'areas': ['Europe', 'Helsinki']}&gt;</pre>
+<h2>3. Define View</h2>
+<p>CouchDB views (i.e. queries) are defined by storing a design document
+ in the database. The couchdb Python API provides simple way to update 
+design documents.</p>
+<p>The query we need is defined in CouchDB by following script</p>
+<pre>function(d) {
+  if(d.name) {
+    var i;
+    for (i = 0; i &lt; d.gboxes.length; i += 1) {
+      emit([d.gboxes[i], d.name], null);
+    }
+  }
+}</pre>
+<p>This view builds a composite key index by the geobox string and the place name.</p>
+<p>Load the view to CouchDB. Note that Javascript function is not 
+validated until next query, and you will get strange error messages if 
+it does not parse or execute correctly. Be careful!</p>
+<pre>&gt;&gt;&gt;from couchdb.design impor ViewDefinition
+&gt;&gt;&gt;viewfunc = 'function(d) { if(d.name) { var i; for (i = 0; i &lt; d.gboxes.length; i += 1) { emit([d.gboxes[i], d.name], null); }}}'
+&gt;&gt;&gt;view = ViewDefinition('places', 'around', viewfunc)
+&gt;&gt;&gt;view.sync(places)</pre>
+<h2>4. Materialize View</h2>
+<p>CouchDB indexes views on first query and the first query will take a 
+long time in this case. This is because CouchDB does not update index on
+ insert, so after bulk import index building will take some time. 
+Monitor the progress on Futon status page. (<a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/http://localhost:5984/_utils/status.html//">http://localhost:5984/_utils/status.html</a>).</p>
+<p>Init indexing by simple query.</p>
+<pre>&gt;&gt;&gt; list(places.view('places/around', limit=1))
+[&lt;Row id='123456', key=['65.00#25.05', u'Some Place'], value=None&gt;</pre>
+<p>Note that we call ‘list’ for the query to force execution. The view 
+member function returns just generator. The limit is one to return one 
+entry to verify success.</p>
+<h2>5. Making Queries</h2>
+<p>Now we can search places by name and location. To do that, lets compute first the geoboxes for a location.</p>
+<pre>&gt;&gt;&gt; geonbr(D('60.198765'), D('25.016443'), D('0.05'))
+['60.15#25.05', '60.20#25.00', '60.20#25.05', '60.15#25.00']</pre>
+<p>To search all locations in single gebox, use query like this:</p>
+<pre>list(places.view('places/around', startkey=['60.20#25.05'],
+                                  endkey=['60.20#25.05',{}]))</pre>
+<p>To search by place name in a geobox, just include the search term 
+both in start and end keys. The search term in endkey is appended with 
+high Unicode character to define upper bound.</p>
+<pre>list(places.view('places/around', startkey=['60.20#25.05', 'Ha'],
+                                  endkey=['60.20#25.05', 'Ha'+u'\u777d']))</pre>
+<p>Define simple helper function</p>
+<pre>def around(box, s):
+   return list(places.view('places/around', startkey=[box, s],
+                                            endkey=[box, s+u'\u777d']))</pre>
+<p>Now, to search all places around location that start with search term
+ (e.g. here ‘H’), call the around function for each geobox for that 
+location.</p>
+<pre>&gt;&gt;&gt; l = geonbr(D('60.19'), D('25.01'), D('0.05'))
+&gt;&gt;&gt; for gb in l:
+...&nbsp;&nbsp;&nbsp;&nbsp; around(gb, 'H')
+...
+[&lt;Row id='659403', key=['60.15#25.05', 'Haakoninlahti'], value=None&gt;, &lt;Row id='658086', key=['60.15#25.05', 'Hevossalmi'], value=None&gt;]
+[&lt;Row id='659403', key=['60.20#25.00', 'Haakoninlahti'], value=None&gt;, &lt;Row id='6545255', key=['60.20#25.00', 'Herttoniemenranta'], value=None&gt;, &lt;Row id='658132', key=['60.20#25.00', 'Herttoniemi'], value=None&gt;, &lt;Row id='651476', key=['60.20#25.00', u'H\xf6gholmen'], value=None&gt;, &lt;Row id='6514261', key=['60.20#25.00', 'Hotel Avion'], value=None&gt;, &lt;Row id='6528458', key=['60.20#25.00', 'Hotel Fenno'], value=None&gt;, &lt;Row id='798734', key=['60.20#25.00', 'Hylkysaari'], value=None&gt;]
+[&lt;Row id='659403', key=['60.20#25.05', 'Haakoninlahti'], value=None&gt;, &lt;Row id='6545255', key=['60.20#25.05', 'Herttoniemenranta'], value=None&gt;, &lt;Row id='658132', key=['60.20#25.05', 'Herttoniemi'], value=None&gt;, &lt;Row id='658086', key=['60.20#25.05', 'Hevossalmi'], value=None&gt;]
+[&lt;Row id='659403', key=['60.15#25.00', 'Haakoninlahti'], value=None&gt;, &lt;Row id='651476', key=['60.15#25.00', u'H\xf6gholmen'], value=None&gt;, &lt;Row id='6514261', key=['60.15#25.00', 'Hotel Avion'], value=None&gt;, &lt;Row id='6528458', key=['60.15#25.00', 'Hotel Fenno'], value=None&gt;, &lt;Row id='798734', key=['60.15#25.00', 'Hylkysaari'], value=None&gt;]</pre>
+<p>Our geobox resolution (0.05) guarantees minimum search radius 2.5km 
+and maximum 7.5km.&nbsp; We could use several resolutions, more boxes or
+ always search from location box and 8 boxes around the location to 
+improve results.</p>
+<p>Note the duplicates that you have to filter out in memory.&nbsp; Now 
+it’s simple thing to fetch the interesting places and compute what ever 
+presentation you want to give to the user.</p>
+<pre>&gt;&gt;&gt; q = places.view('_all_docs', keys=['659403', '658086'], include_docs=True)
+&gt;&gt;&gt; for row in q:
+...&nbsp;&nbsp;&nbsp;&nbsp; print row.doc
+...
+&lt;Document '659403'@'1-5f7fe8f63ae034ea9562c20a8c9b6ae7' {'gboxes': ['60.15#25.05', '60.20#25.00', '60.20#25.05', '60.15#25.00'], 'loc': {'lat': '60.16694', 'lon': '60.16694'}, 'name': 'Haakoninlahti', 'areas': ['Europe', 'Helsinki']}&gt;
+&lt;Document '658086'@'1-ecaf156721b392411f025a3b00e27d62' {'gboxes': ['60.20#25.05', '60.15#25.05'], 'loc': {'lat': '60.16167', 'lon': '60.16167'}, 'name': 'Hevossalmi', 'areas': ['Europe', 'Helsinki']}&gt;</pre>
+
+<div class="wpadvert" style="position: relative; width:300px; text-align: center; padding: 0; margin: 10px auto; overflow: hidden; clear: both;">
+<a style="position: absolute; text-align: left; display: block; font: 9px/1 sans-serif; text-decoration: underline;" href="http://en.wordpress.com/about-these-ads/" rel="nofollow">About these ads</a>
+<script type="text/javascript">
+		var wpcom_adclk_hovering = false;
+		var wpcom_adclk_recorded = false;
+		var wpcom_adclk_theme = "Enterprise";
+		var wpcom_adclk_slot = "wpcom_below_post";
+		var wpcom_adclk_network = ( typeof wpcom_adclk_network === "undefined" ) ? "" : wpcom_adclk_network ;
+
+		jQuery(document).ready( function() {
+			function wpcom_adclk_hover_yes() { wpcom_adclk_hovering = true; }
+			function wpcom_adclk_hover_no() { wpcom_adclk_hovering = false; }
+			jQuery(".wpadvert").click(wpcom_adclk_click);
+			jQuery(".wpadvert iframe").hover( wpcom_adclk_hover_yes, wpcom_adclk_hover_no );
+			jQuery(".wpadvert object").hover( wpcom_adclk_hover_yes, wpcom_adclk_hover_no );
+
+			jQuery(window).blur( function() {
+				if ( wpcom_adclk_hovering ) { wpcom_adclk_click(); }
+			});
+		});
+
+		function wpcom_adclk_impression() {
+			var stat_gif = document.location.protocol + "//stats.wordpress.com/g.gif?v=wpcom-no-pv";
+			stat_gif += "&x_ads_imp_theme=" + wpcom_adclk_theme;
+			stat_gif += "&x_ads_imp_placement="+wpcom_adclk_slot;
+			stat_gif += "&x_ads_imp_network=" + wpcom_adclk_network;
+			stat_gif += "&x_ads_imp_theme_network="+wpcom_adclk_theme+"_"+wpcom_adclk_network;
+			new Image().src = stat_gif + "&baba=" + Math.random();
+			return true;
+		}
+
+		function wpcom_adclk_click() {
+			if (wpcom_adclk_recorded) { return true; } // no double counting
+			var stat_gif = document.location.protocol + "//stats.wordpress.com/g.gif?v=wpcom-no-pv";
+			stat_gif += "&x_ads_click_theme=" + wpcom_adclk_theme;
+			stat_gif += "&x_ads_click_placement="+wpcom_adclk_slot;
+			stat_gif += "&x_ads_click_network=" + wpcom_adclk_network;
+			stat_gif += "&x_ads_click_theme_network="+wpcom_adclk_theme+"_"+wpcom_adclk_network;
+
+			new Image().src = stat_gif + "&baba=" + Math.random();
+			wpcom_adclk_recorded = true;
+			var now=new Date(); var end=now.getTime()+250;
+			while(true){now=new Date();if(now.getTime()>end){break;}}
+			return true;
+		}
+	
+GA_googleAddAttr("AdOpt", "1");
+GA_googleAddAttr("Origin", "other");
+GA_googleAddAttr("LangId", "1");
+GA_googleAddAttr("Domain", "bravenewmethod.wordpress.com");
+GA_googleAddAttr("BlogId", "18135076");
+GA_googleAddAttr("Autotag", "technology");
+GA_googleAddAttr("Tag", "experimental");
+GA_googleAddAttr("theme_bg", "f0f0f0");
+GA_googleAddAttr("theme_border", "cccccc");
+GA_googleAddAttr("theme_text", "555555");
+GA_googleAddAttr("theme_link", "008DCF");
+GA_googleAddAttr("theme_url", "008DCF");
+GA_googleAddAdSensePageAttr("google_page_url", "http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/");
+GA_googleFillSlot("wpcom_below_post");
+</script><script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/ads"></script><div id="google_ads_div_wpcom_below_post_ad_wrapper">
+<div id="google_ads_div_wpcom_below_post_ad_container" style="display:inline-block;"><script type="text/javascript">
+var unrulyMacros = {};
+unrulyMacros.siteRef="bravenewmethod.wordpress.com";
+</script>
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/wildfire_73165225.js"></script><span style="width: 0px; height: 0px; display: block; overflow: hidden; visibility: hidden;">.</span><script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/wildfire_73165225_002.js"></script><iframe id="trackFrame" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/fallBackTrack.html" marginheight="0" marginwidth="0" frameborder="no" height="1" scrolling="no" width="1"></iframe>
+<script type="text/javascript"><!--
+google_ad_client = "ca-pub-3443918307802676";
+/* Unruly Media Passback */
+google_ad_slot = "0408592886";
+google_ad_width = 300;
+google_ad_height = 250;
+//-->
+</script>
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/show_ads.js">
+</script><ins style="display:inline-table;border:none;height:250px;margin:0;padding:0;position:relative;visibility:visible;width:300px"><ins id="aswift_0_anchor" style="display:block;border:none;height:250px;margin:0;padding:0;position:relative;visibility:visible;width:300px"><iframe marginwidth="0" marginheight="0" vspace="0" hspace="0" allowtransparency="true" onload="var i=this.id,s=window.google_iframe_oncopy,H=s&amp;&amp;s.handlers,h=H&amp;&amp;H[i],w=this.contentWindow,d;try{d=w.document}catch(e){}if(h&amp;&amp;d&amp;&amp;(!d.body||!d.body.firstChild)){if(h.call){setTimeout(h,0)}else if(h.match){w.location.replace(h)}}" id="aswift_0" name="aswift_0" style="left:0;position:absolute;top:0;" frameborder="0" height="250" scrolling="no" width="300"></iframe></ins></ins>
+
+
+
+</div>
+</div>
+
+</div>
+<style type="text/css">
+div.wpadvert>div { margin-top: 1em; }
+</style>
+<script type="text/javascript">
+jQuery( window ).load( function() {
+    if ( jQuery(".wpadvert script[src*='shareth.ru']").length > 0 || jQuery(".wpadvert .sharethrough-placement").length > 0 ) {
+        jQuery( '.wpadvert' ).css( 'width', '400px' );
+    }
+setTimeout(function(){if(typeof GS_googleAddAdSenseService !== 'function'){new Image().src=document.location.protocol+"//stats.wordpress.com/g.gif?v=wpcom-no-pv&x_noads=adblock&baba="+Math.random()}},100);
+} );
+</script>
+<div id="jp-post-flair" class="sharedaddy sd-like-enabled sd-sharing-enabled"><div class="sharedaddy sd-sharing-enabled"><div class="robots-nocontent sd-block sd-social sd-social-official sd-sharing"><h3 class="sd-title">Share this:</h3><div class="sd-content"><ul><li class="share-facebook"><div class="like_button"><iframe src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/like.html" style="border:none; overflow:hidden; width:96px; height:21px;" allowtransparency="true" frameborder="0" scrolling="no"></iframe></div></li><li class="share-twitter"><div class="twitter_button"><iframe allowtransparency="true" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/tweet_button.html" style="width:101px; height:20px;" frameborder="0" scrolling="no"></iframe></div></li><li><a href="#" class="sharing-anchor sd-button share-more"><span>More</span></a></li><li class="share-end"></li></ul><div class="sharing-hidden"><div class="inner" style="display: none;"><ul><li class="share-stumbleupon"><div class="stumbleupon_button"><iframe src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/a.html" style="border:none; overflow:hidden; width:74px; height: 18px;" allowtransparency="true" frameborder="0" scrolling="no"></iframe></div></li><li class="share-reddit"><div class="reddit_button"><iframe src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/button1.html" frameborder="0" height="22" scrolling="no" width="120"></iframe></div></li><li class="share-end"></li><li class="share-digg"><div class="digg_button"><span class="db-wrapper db-clear db-compact"><span><span class="db-container db-submit"><span class="db-body db-compact"><span class="db-count"></span><span class="db-copy"></span><a class="db-anchor">digg</a></span></span></span></span></div></li><li class="share-end"></li></ul></div></div><div class="sharing-clear"></div></div></div></div><div class="wpl-likebox sd-block sd-like"><h3 class="sd-title">Like this:</h3><div class="sd-content"><div id="like-4" class="wpl-button "><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/?like=1&amp;source=post_flair&amp;_wpnonce=d64817105f" title="I like this." class="like needs-login sd-button" rel="nofollow"><span>Like</span></a></div><div class="wpl-count sd-like-count">Be the first to like this.</div></div></div></div><div class="clear"></div>
+					
+					<!--
+					<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+			xmlns:dc="http://purl.org/dc/elements/1.1/"
+			xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/">
+		<rdf:Description rdf:about="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/"
+    dc:identifier="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/"
+    dc:title="Simple Reverse Geocoding with&nbsp;CouchDB"
+    trackback:ping="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/trackback/" />
+</rdf:RDF>					-->
+
+				</div>
+
+				<div class="post-meta">
+					<p>
+						<span class="categories">Filed under <a href="http://bravenewmethod.wordpress.com/category/experimental/" title="View all posts in Experimental" rel="category tag">Experimental</a></span>
+											</p>
+				</div>
+
+			</div>
+
+			
+						<p></p>
+
+			<div id="comments">
+	
+
+	<h3 id="comments-title">5 Responses to <em>Simple Reverse Geocoding with&nbsp;CouchDB</em>	</h3>
+
+	<ol class="commentlist snap_preview">
+				<li class="comment byuser comment-author-gaganb even thread-even depth-1 highlander-comment" id="li-comment-79">
+		<div id="comment-79">
+		<div class="comment-author vcard">
+			<img id="grav-39d75f04e1a21ba653b41ac75ec1b026-0" alt="" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/39d75f04e1a21ba653b41ac75ec1b026.png" class="avatar avatar-40 grav-hashed grav-hijack" height="40" width="40">			<cite class="fn"><a href="http://gaganb.wordpress.com/" rel="external nofollow" class="url">Gagan</a></cite> <span class="says">says:</span>		</div>
+		
+		<div class="comment-meta commentmetadata"><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#comment-79">September 14, 2011 at 14:18</a></div>
+
+		<div class="comment-body"><p>Hi Ikonen,</p>
+<p>Quite a good descriptive blog about the geobox working. Your approach
+ with geobox for spatial indexing seems promising in CouchDB,  as 
+existing solution with GeoCouch does not support the reduce and geohash 
+has flaw of edge case.<br>
+Well I have one query, is this solution is extendable to index polygon 
+or polyline features. What I think,  if we increase the neighbors to 
+match the extent (bbox)  of polygon and index all these geobox than we 
+can query the polygon features also.<br>
+I am new to the NoSQL/CouchDB, another doubt I have about the 
+performance in case the query bbox size is large. This will lead to more
+ numbers of geoboxes that need to be checked in view.<br>
+I am interested in polygon and line features indexing and searching 
+through the approach you have explained, please let me know how much 
+suitable is this.</p>
+<p>Regards,<br>
+Gagan</p>
+</div>
+
+		<div class="reply">
+			<a class="comment-reply-link" href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/?replytocom=79#respond" onclick='return addComment.moveForm("comment-79", "79", "respond", "4")'>Reply</a>		</div>
+	</div>
+
+	<ul class="children">
+		<li class="comment byuser comment-author-tikonen bypostauthor odd alt depth-2 highlander-comment" id="li-comment-80">
+		<div id="comment-80">
+		<div class="comment-author vcard">
+			<img id="grav-40ccd6f3c734870720f616b887d36c05-0" alt="" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/40ccd6f3c734870720f616b887d36c05.jpeg" class="avatar avatar-40 grav-hashed grav-hijack" height="40" width="40">			<cite class="fn"><a href="http://softpourri.wordpress.com/" rel="external nofollow" class="url">tikonen</a></cite> <span class="says">says:</span>		</div>
+		
+		<div class="comment-meta commentmetadata"><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#comment-80">September 14, 2011 at 17:04</a></div>
+
+		<div class="comment-body"><p>Hi, I believe it’s possible to use this 
+solution to search entities inside a polygon. In this case I would index
+ each place coordinate with varying resolutions that make possible to 
+limit the search to desired area size.</p>
+<p>0.0001 = 10m<br>
+0.0005 = 50m<br>
+0.001 = 100m<br>
+0.0025 = 200m<br>
+…<br>
+0.1 = 10 km<br>
+0.2 = 20  km</p>
+<p>Then when searching polygons, compute the polygon bounding box and 
+select best granularity for the polygon. In some cases it could 10km 
+box, in some cases  100m box. depends of the polygon size.<br>
+Then simply compute the search keys in selected resolution from polygon 
+vertex locations with neighbors, union them to avoid unnecessary double 
+queries and query &amp; merge results.<br>
+This is relatively straightforward to optimize further by selecting 
+optimal number of queried geoboxes based on size and form of the 
+polygon. For example, query could consist of single 1km box and one 20m 
+box where polygon bleeds over edge.</p>
+<p>Drawback is that with large number of geoboxes the space and first 
+query cost is high. Also, when adding more query parameters (like the 
+name as in example) the number of keys grow exponentially.</p>
+</div>
+
+		<div class="reply">
+			<a class="comment-reply-link" href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/?replytocom=80#respond" onclick='return addComment.moveForm("comment-80", "80", "respond", "4")'>Reply</a>		</div>
+	</div>
+
+	<ul class="children">
+		<li class="comment byuser comment-author-gaganb even depth-3 highlander-comment" id="li-comment-81">
+		<div id="comment-81">
+		<div class="comment-author vcard">
+			<img id="grav-39d75f04e1a21ba653b41ac75ec1b026-1" alt="" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/39d75f04e1a21ba653b41ac75ec1b026.png" class="avatar avatar-40 grav-hashed grav-hijack" height="40" width="40">			<cite class="fn"><a href="http://gaganb.wordpress.com/" rel="external nofollow" class="url">Gagan</a></cite> <span class="says">says:</span>		</div>
+		
+		<div class="comment-meta commentmetadata"><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#comment-81">September 15, 2011 at 06:24</a></div>
+
+		<div class="comment-body"><p>Thanks Ikonen,</p>
+<p>I got your point and I’ll experiment with this approach. I was going 
+through the geobox concept in more detail, got one doubt that is the 
+geobox string just a unique id for that box or it has more significance.
+ </p>
+<p>Regards,<br>
+Gagan</p>
+</div>
+
+		<div class="reply">
+					</div>
+	</div>
+
+	</li>
+		<li class="comment byuser comment-author-tikonen bypostauthor odd alt depth-3 highlander-comment" id="li-comment-82">
+		<div id="comment-82">
+		<div class="comment-author vcard">
+			<img id="grav-40ccd6f3c734870720f616b887d36c05-1" alt="" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/40ccd6f3c734870720f616b887d36c05.jpeg" class="avatar avatar-40 grav-hashed grav-hijack" height="40" width="40">			<cite class="fn"><a href="http://softpourri.wordpress.com/" rel="external nofollow" class="url">tikonen</a></cite> <span class="says">says:</span>		</div>
+		
+		<div class="comment-meta commentmetadata"><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#comment-82">September 15, 2011 at 08:27</a></div>
+
+		<div class="comment-body"><p>Geobox string is just unique id for the 
+box. In my example it’s concatenated quantized coordinates with ‘#’ in 
+the middle so I it’s easily recognizable and you can tell immediately 
+the size of the box from the string. It also works nicely with even 
+(e.g. 75.0, 54.0) coordinates and you should be able to add other 
+resolutions later without computing all of them again. (of course some 
+care is needed so that you don’t use resolutions that are divisible so 
+that they produce same id for different box sizes)</p>
+</div>
+
+		<div class="reply">
+					</div>
+	</div>
+
+	</li>
+</ul>
+</li>
+</ul>
+</li>
+		<li class="comment byuser comment-author-gaganb even thread-odd thread-alt depth-1 highlander-comment" id="li-comment-83">
+		<div id="comment-83">
+		<div class="comment-author vcard">
+			<img id="grav-39d75f04e1a21ba653b41ac75ec1b026-2" alt="" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/39d75f04e1a21ba653b41ac75ec1b026.png" class="avatar avatar-40 grav-hashed grav-hijack" height="40" width="40">			<cite class="fn"><a href="http://gaganb.wordpress.com/" rel="external nofollow" class="url">Gagan</a></cite> <span class="says">says:</span>		</div>
+		
+		<div class="comment-meta commentmetadata"><a href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#comment-83">September 15, 2011 at 10:59</a></div>
+
+		<div class="comment-body"><p>Thanks Again Ikonen for the detail explanation.</p>
+<p>Gagan</p>
+</div>
+
+		<div class="reply">
+			<a class="comment-reply-link" href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/?replytocom=83#respond" onclick='return addComment.moveForm("comment-83", "83", "respond", "4")'>Reply</a>		</div>
+	</div>
+
+	</li>
+	</ol>
+
+
+								<div class="js" id="respond">
+				<h3 id="reply-title">Leave a Reply <small><a rel="nofollow" id="cancel-comment-reply-link" href="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/#respond" style="display:none;">Cancel reply</a></small></h3>
+									<form action="http://bravenewmethod.wordpress.com/wp-comments-post.php" method="post" id="commentform">
+																										
+
+
+												
+<input name="hc_post_as" id="hc_post_as" value="guest" type="hidden">
+
+<div class="comment-form-field comment-textarea">
+	
+	<div id="comment-form-comment"><textarea tabindex="-1" style="height: 36px; resize: none; overflow-y: hidden; position: absolute; top: 0px; left: -9999px; width: 608px; line-height: 16px; text-decoration: none; letter-spacing: 0px;" placeholder="Enter your comment here..."></textarea><textarea style="height: 36px; resize: none; overflow-y: hidden;" placeholder="Enter your comment here..." id="comment" name="comment"></textarea></div>
+</div>
+
+<div style="display: none;" id="comment-form-identity">
+
+	<div id="comment-form-nascar">
+		<p>Fill in your details below or click an icon to log in:</p>
+		<ul>
+			<li class="selected" style="display:none;">
+				<a href="#comment-form-guest" id="postas-guest" title="Guest">
+					<span></span>
+				</a>
+			</li>
+			<li>
+				<a href="#comment-form-load-service:WordPress.com" id="postas-wordpress" title="WordPress.com">
+					<span></span>
+				</a>
+			</li>
+			<li>
+				<a href="#comment-form-load-service:Twitter" id="postas-twitter" title="Twitter">
+					<span></span>
+				</a>
+			</li>
+			<li>
+				<a href="#comment-form-load-service:Facebook" id="postas-facebook" title="Facebook">
+					<span></span>
+				</a>
+			</li>
+		</ul>
+	</div>
+
+	<div id="comment-form-guest" class="comment-form-service selected">
+		<div class="comment-form-padder">
+			<div class="comment-form-avatar">
+<a href="https://gravatar.com/site/signup/" target="_blank">				<img src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/ad516503a11cd5ca435acc9bb6523536.png" alt="Gravatar" class="no-grav" width="25">
+</a>			</div>
+
+				<div class="comment-form-fields">
+				<div class="comment-form-field comment-form-email">
+					<label for="email">Email <span class="required">(required)</span> <span class="nopublish">(Address never made public)</span></label>
+					<div class="comment-form-input"><input id="email" name="email" type="email"></div>
+				</div>
+				<div class="comment-form-field comment-form-author">
+					<label for="author">Name <span class="required">(required)</span></label>
+					<div class="comment-form-input"><input id="author" name="author" type="text"></div>
+				</div>
+				<div class="comment-form-field comment-form-url">
+					<label for="url">Website</label>
+					<div class="comment-form-input"><input id="url" name="url" type="text"></div>
+				</div> 
+			</div>
+	
+		</div>
+	</div>
+
+	<div id="comment-form-wordpress" class="comment-form-service">
+		<div class="comment-form-padder">
+			<div class="comment-form-avatar">
+				<img src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/wplogo.png" alt="WordPress.com Logo" class="no-grav" width="25">
+			</div>
+
+				<div class="comment-form-fields">
+				<input name="wp_avatar" id="wordpress-avatar" class="comment-meta-wordpress" value="" type="hidden">
+				<input name="wp_user_id" id="wordpress-user_id" class="comment-meta-wordpress" value="" type="hidden">
+				<input name="wp_access_token" id="wordpress-access_token" class="comment-meta-wordpress" value="" type="hidden">
+				<p class="comment-form-posting-as pa-wordpress"><strong></strong> You are commenting using your WordPress.com account. <span class="comment-form-log-out">(&nbsp;<a href="javascript:HighlanderComments.doExternalLogout(%20'wordpress'%20);">Log&nbsp;Out</a>&nbsp;/&nbsp;<a href="#" onclick="javascript:HighlanderComments.switchAccount();return false;">Change</a>&nbsp;)</span></p>
+			</div>
+	
+		</div>
+	</div>
+
+	<div id="comment-form-twitter" class="comment-form-service">
+		<div class="comment-form-padder">
+			<div class="comment-form-avatar">
+				<img src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/ad516503a11cd5ca435acc9bb6523536.png" alt="Twitter picture" class="no-grav" width="25">
+			</div>
+
+				<div class="comment-form-fields">
+				<input name="twitter_avatar" id="twitter-avatar" class="comment-meta-twitter" value="" type="hidden">
+				<input name="twitter_user_id" id="twitter-user_id" class="comment-meta-twitter" value="" type="hidden">
+				<input name="twitter_access_token" id="twitter-access_token" class="comment-meta-twitter" value="" type="hidden">
+				<p class="comment-form-posting-as pa-twitter"><strong></strong> You are commenting using your Twitter account. <span class="comment-form-log-out">(&nbsp;<a href="javascript:HighlanderComments.doExternalLogout(%20'twitter'%20);">Log&nbsp;Out</a>&nbsp;/&nbsp;<a href="#" onclick="javascript:HighlanderComments.switchAccount();return false;">Change</a>&nbsp;)</span></p>
+			</div>
+	
+		</div>
+	</div>
+
+	<div id="comment-form-facebook" class="comment-form-service">
+		<div class="comment-form-padder">
+			<div class="comment-form-avatar">
+				<img src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/ad516503a11cd5ca435acc9bb6523536.png" alt="Facebook photo" class="no-grav" width="25">
+			</div>
+
+				<div class="comment-form-fields">
+				<input name="fb_avatar" id="facebook-avatar" class="comment-meta-facebook" value="" type="hidden">
+				<input name="fb_user_id" id="facebook-user_id" class="comment-meta-facebook" value="" type="hidden">
+				<input name="fb_access_token" id="facebook-access_token" class="comment-meta-facebook" value="" type="hidden">
+				<p class="comment-form-posting-as pa-facebook"><strong></strong> You are commenting using your Facebook account. <span class="comment-form-log-out">(&nbsp;<a href="javascript:HighlanderComments.doExternalLogout(%20'facebook'%20);">Log&nbsp;Out</a>&nbsp;/&nbsp;<a href="#" onclick="javascript:HighlanderComments.switchAccount();return false;">Change</a>&nbsp;)</span></p>
+			</div>
+	
+		</div>
+	</div>
+
+
+	<div id="comment-form-load-service" class="comment-form-service">
+		<div class="comment-form-posting-as-cancel"><a href="javascript:HighlanderComments.cancelExternalWindow();">Cancel</a></div>
+		<p>Connecting to %s</p>
+	</div>
+	
+	
+</div>
+
+<script type="text/javascript">
+jQuery(document).ready(function(){
+	var input = document.createElement( 'input' ),
+	    comment = jQuery( '#comment' );
+
+	if ( 'placeholder' in input ) {
+		comment.attr( 'placeholder', jQuery( '.comment-textarea label' ).remove().text() );
+	}
+
+	// Expando Mode: start small, then auto-resize on first click + text length
+	jQuery( '#comment-form-identity' ).hide();
+	jQuery( '#comment-form-subscribe' ).hide();
+	jQuery( '#commentform .form-submit' ).hide();
+
+	comment.css( { 'height':'10px' } ).one( 'focus', function() {
+		var timer = setInterval( HighlanderComments.resizeCallback, 10 )
+		jQuery( this ).animate( { 'height': HighlanderComments.initialHeight } ).delay( 100 ).queue( function(n) { clearInterval( timer ); HighlanderComments.resizeCallback(); n(); } );
+		jQuery( '#comment-form-identity' ).slideDown();
+		jQuery( '#comment-form-subscribe' ).slideDown();
+		jQuery( '#commentform .form-submit' ).slideDown();
+	});
+});
+</script>
+
+<div style="display: none;" id="comment-form-subscribe"> 
+	<p class="comment-subscription-form"><input name="subscribe" id="subscribe" value="subscribe" style="width: auto;" tabindex="6" type="checkbox"> <label class="subscribe-label" id="subscribe-label" for="subscribe" style="display: inline;">Notify me of follow-up comments via email.</label></p></div>
+
+												<p style="display: none;" class="form-submit">
+							<input name="submit" id="comment-submit" value="Post Comment" type="submit">
+							<input name="comment_post_ID" value="4" id="comment_post_ID" type="hidden">
+<input name="comment_parent" id="comment_parent" value="0" type="hidden">
+						</p>
+						
+<input name="genseq" value="1360254697" type="hidden">
+<p style="display: none;"><input id="akismet_comment_nonce" name="akismet_comment_nonce" value="5afcb421b4" type="hidden"></p><script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/form.js"></script>
+<p style="display: none;"><input id="ak_js" name="ak_js" value="1360254697185" type="hidden"></p>					</form>
+							</div><!-- #respond -->
+			<div style="clear: both"></div>			
+</div><!-- #comments -->
+	</div>
+
+<div id="sidebar">
+
+	
+        <div class="widget widget_categories">
+            <h4>Categories</h4>
+            <select name="cat" id="cat" class="postform">
+	<option selected="selected" value="-1">Select category</option>
+	<option class="level-0" value="15550">Experimental</option>
+	<option class="level-0" value="53242">html5</option>
+	<option class="level-0" value="457">Javascript</option>
+	<option class="level-0" value="1">Uncategorized</option>
+</select>
+            <script type="text/javascript">
+			/* <![CDATA[ */
+                var dropdown = document.getElementById("cat");
+                function onCatChange() {
+                    if ( dropdown.options[dropdown.selectedIndex].value > 0 ) {
+                        location.href = "http://bravenewmethod.wordpress.com/?cat="+dropdown.options[dropdown.selectedIndex].value;
+                    }
+                }
+                dropdown.onchange = onCatChange;
+            /* ]]> */
+            </script>
+        </div>
+
+		<div class="widget widget_recent_entries">
+            <h4>Recent Posts</h4>
+                <ul>
+                    	<li><a href="http://bravenewmethod.wordpress.com/2013/02/05/running-external-worker-process-in-node-js/" title="Running external worker process in&nbsp;Node.js">Running external worker process in&nbsp;Node.js</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/11/08/apple-push-notifications-with-haskell/" title="Apple Push Notifications with&nbsp;Haskell">Apple Push Notifications with&nbsp;Haskell</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/06/03/polling-apple-push-notification-feedback-service-with-node-js/" title="Polling Apple Push Notification feedback service with&nbsp;Node.js">Polling Apple Push Notification feedback service with&nbsp;Node.js</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/06/02/simple-popularity-algorithm-with-decay/" title="Simple popularity algorithm with&nbsp;decay">Simple popularity algorithm with&nbsp;decay</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/05/31/couchdb-cleanup-script-for-purging-old-docs/" title="CouchDB cleanup script for purging old&nbsp;docs">CouchDB cleanup script for purging old&nbsp;docs</a></li>
+                </ul>
+		</div>
+
+		<div class="widget widget_archive">
+            <h4>Archives</h4>
+                <ul>
+                    	<li><a href="http://bravenewmethod.wordpress.com/2013/02/" title="February 2013">February 2013</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/11/" title="November 2012">November 2012</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/06/" title="June 2012">June 2012</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/05/" title="May 2012">May 2012</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2012/04/" title="April 2012">April 2012</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2011/08/" title="August 2011">August 2011</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2011/06/" title="June 2011">June 2011</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2011/03/" title="March 2011">March 2011</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2011/02/" title="February 2011">February 2011</a></li>
+	<li><a href="http://bravenewmethod.wordpress.com/2010/12/" title="December 2010">December 2010</a></li>
+                </ul>
+		</div>
+
+		<div class="widget widget_links">
+            <h4>Blogroll</h4>
+                <ul>
+                    <li><a href="http://en.forums.wordpress.com/">Discuss</a></li>
+<li><a href="http://www.plinky.com/">Get Inspired</a></li>
+<li><a href="http://polldaddy.com/">Get Polling</a></li>
+<li><a href="http://en.support.wordpress.com/">Get Support</a></li>
+<li><a href="http://learn.wordpress.com/">Learn WordPress.com</a></li>
+<li><a href="http://planet.wordpress.org/">WordPress Planet</a></li>
+<li><a href="http://en.blog.wordpress.com/">WordPress.com News</a></li>
+                </ul>
+		</div>
+
+		<div class="widget widget_meta">
+            <h4>Meta</h4>
+                <ul>
+                    <li><a href="http://bravenewmethod.wordpress.com/wp-login.php?action=register">Register</a></li>                    <li><a href="http://bravenewmethod.wordpress.com/wp-login.php">Log in</a></li>
+                    <li><a href="http://www.wordpress.org/">WordPress</a></li>
+                                        <li><a href="http://validator.w3.org/check?uri=referer">XHTML</a></li>
+                </ul>
+		</div>
+
+	
+</div>
+</div>
+
+
+<div id="footer">
+	<div class="footerleft">
+		<p><a href="http://wordpress.com/?ref=footer" rel="generator">Blog at WordPress.com</a>.</p>
+    </div>
+    <div class="footerright">
+	    Theme: <a href="http://theme.wordpress.com/themes/enterprise/" title="Learn more about this theme">Enterprise</a> by <a href="http://www.studiopress.com/" rel="designer">StudioPress</a>.    </div>
+</div>
+
+</div>
+
+
+<script type="text/javascript">
+var _qevents = _qevents || [], wpcomQuantcastData = {"qacct":"p-18-mFEk4J448M","labels":",language.en,type.wpcom,as"};
+function wpcomQuantcastPixel( labels, options ) {
+	var i, defaults = wpcomQuantcastData, data = { event: 'ajax' };
+
+	labels  = labels  || '';
+	options = options || {};
+
+	if ( typeof labels != 'string' )
+		options = labels;
+
+	for ( i in defaults ) {
+		data[i] = defaults[i];
+	}
+
+	for ( i in options ) {
+		data[i] = options[i];
+	}
+
+	if ( data.labels ) {
+		data.labels += ',' + labels;
+	} else {
+		data.labels = labels;
+	}
+
+	_qevents.push( data );
+};
+(function() {var elem = document.createElement('script');elem.src = (document.location.protocol == "https:" ? "https://secure" : "http://edge") + ".quantserve.com/quant.js";elem.async = true;elem.type = "text/javascript";var scpt = document.getElementsByTagName('script')[0];scpt.parentNode.insertBefore(elem, scpt);  })();
+_qevents.push( wpcomQuantcastData );
+</script>
+<noscript><div style="display: none;"><img src="//pixel.quantserve.com/pixel/p-18-mFEk4J448M.gif?labels=%2Clanguage.en%2Ctype.wpcom%2Cas" height="1" width="1" alt="" /></div></noscript>
+
+
+	<script type="text/javascript">
+	/* <![CDATA[ */
+	(function($){
+		$(document).on( 'ready post-load', function() {
+
+			// Remove the login box when clicking the page
+			$( document ).mousedown( function( e ) {
+				if ( null == $( e.target ).closest( '#wpl-mustlogin' ).get( 0 ) ) {
+					$( '#wpl-mustlogin' ).remove();
+				}
+			});
+
+			// Handle clicking the like button itself
+			$('.wpl-button > a.like').click( function(e) {
+				e.preventDefault();
+
+				var postid = $(this).parent().attr('id').split('like-')[1];
+				$.post( 'http://bravenewmethod.wordpress.com/wp-admin/admin-ajax.php', {
+					'action': 'wpl_record_stat',
+					'stat_name': 'loggedout_like_click'
+				} );
+
+				var tenMins = new Date();
+				tenMins.setTime( tenMins.getTime() + 600000 );
+				document.cookie = 'wpl_rand=375e4a4db9; expires=' + tenMins.toGMTString() + '; domain=wordpress.com; path=/;';
+
+				$(this).parent().siblings('.wpl-count').after( '\
+					<div id="wpl-mustlogin"> \
+						<form action="https://bravenewmethod.wordpress.com/wp-login.php" method="post"> \
+							<p>Just one more step to like this:</p> \
+							<label><span>Username</span> <input type="text" name="log" id="user_login" class="input" value="" size="20" tabindex="80" /></label> \
+							<label><span>Password</span> <input type="password" name="pwd" id="user_pass" class="input" value="" size="20" tabindex="81" /></label> \
+							<input type="submit" name="wp-submit" id="wp-submit" class="button-primary" value="Log In" tabindex="82" /> \
+							<input type="hidden" name="postid" value="' + postid + '" /> \
+							<input type="hidden" name="redirect_to" value="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb?year=2010&#038;monthnum=12&#038;day=02&#038;name=simple-reverse-geocoding-with-couchdb&#038;like=1" /> \
+							<input type="hidden" name="wpl_rand" value="375e4a4db9" /> \
+							<p>Not a member yet? <a href="http://wordpress.com/signup/?ref=likebox&user=1" id="wpl-signup-link">Sign up with WordPress.com for free</a></p> \
+						</form> \
+					</div> \
+				');
+
+				$('#wpl-mustlogin').hide().slideDown('fast');
+			} );
+
+			$('#wpl-mustlogin input.input').live( 'focus', function() {
+				$(this).prev().hide();
+			}).live( 'blur', function() {
+				if ( $(this).val() == '' ) {
+					$(this).prev().show();
+				}
+			});
+
+			$('#wpl-mustlogin input#wp-submit').live( 'click', function(e) {
+				e.preventDefault();
+
+				$.post( 'http://bravenewmethod.wordpress.com/wp-admin/admin-ajax.php', {
+					'action': 'wpl_record_stat',
+					'stat_name': 'loggedout_login_submit'
+				}, function() {
+					$('#wpl-mustlogin form').submit();
+				} );
+			});
+
+			$('#wpl-mustlogin a#wpl-signup-link').live( 'click', function(e) {
+				e.preventDefault();
+
+				var link = $(this).attr('href');
+
+				$.post( 'http://bravenewmethod.wordpress.com/wp-admin/admin-ajax.php', {
+					'action': 'wpl_record_stat',
+					'stat_name': 'loggedout_signup_click'
+				}, function() {
+					location.href = link;
+				} );
+			});
+		})
+	})(jQuery);
+	/* ]]> */
+	</script>
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/gprofiles.js"></script>
+<script type="text/javascript">
+/* <![CDATA[ */
+var WPGroHo = {"my_hash":""};
+/* ]]> */
+</script>
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/wpgroho.js"></script>
+<script>jQuery(document).ready(function($){ Gravatar.profile_cb = function( h, d ) { WPGroHo.syncProfileData( h, d );	}; Gravatar.my_hash = WPGroHo.my_hash; Gravatar.init( 'body', '#wp-admin-bar-my-account' ); });</script>	<div style="display:none">
+	<div class="grofile-hash-map-39d75f04e1a21ba653b41ac75ec1b026">
+	</div>
+	<div class="grofile-hash-map-40ccd6f3c734870720f616b887d36c05">
+	</div>
+	</div>
+<script type="text/javascript">
+/* <![CDATA[ */
+var HighlanderComments = {"loggingInText":"Logging In\u2026","submittingText":"Posting Comment\u2026","postCommentText":"Post Comment","connectingToText":"Connecting to %s","commentingAsText":"%1$s: You are commenting using your %2$s account.","logoutText":"Log Out","loginText":"Log In","connectURL":"http:\/\/bravenewmethod.wordpress.com\/public.api\/connect\/?action=request","logoutURL":"http:\/\/bravenewmethod.wordpress.com\/wp-login.php?action=logout&_wpnonce=d64059ae59","homeURL":"http:\/\/bravenewmethod.wordpress.com\/","postID":"4","gravDefault":"identicon","enterACommentError":"Please enter a comment","enterEmailError":"Please enter your email address here","invalidEmailError":"Invalid email address","enterAuthorError":"Please enter your name here","gravatarFromEmail":"This picture will show whenever you leave a comment. Click to customize it.","logInToExternalAccount":"Log in to use details from one of these accounts.","change":"Change","changeAccount":"Change Account","comment_registration":"0","userIsLoggedIn":"","isJetpack":"0"};
+/* ]]> */
+</script>
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/script.js"></script>
+
+	<div style="bottom: -270px;" id="bit" class="loggedout-follow-normal">
+		<a class="bsub" href="javascript:void(0)"><span id="bsub-text">Follow</span></a>
+		<div id="bitsubscribe">
+
+					<h3><label for="loggedout-follow-field">Follow “Brave New Method”</label></h3>
+
+			<form action="https://subscribe.wordpress.com" method="post" accept-charset="utf-8" id="loggedout-follow">
+			<p>Get every new post delivered to your Inbox.</p>
+
+			<p id="loggedout-follow-error" style="display: none;"></p>
+
+						<p class="bit-follow-count">Join 43 other followers</p>
+			<p><input name="email" style="width: 95%; padding: 1px 2px" value="Enter your email address" onfocus='this.value=(this.value=="Enter your email address") ? "" : this.value;' onblur='this.value=(this.value=="") ? "Enter email address" : this.value;' id="loggedout-follow-field" type="email"></p>
+
+			<input name="action" value="subscribe" type="hidden">
+			<input name="blog_id" value="18135076" type="hidden">
+			<input name="source" value="http://bravenewmethod.wordpress.com/2010/12/02/simple-reverse-geocoding-with-couchdb/" type="hidden">
+			<input name="sub-type" value="loggedout-follow" type="hidden">
+
+			<input id="_wpnonce" name="_wpnonce" value="ed5bed58fe" type="hidden"><input name="_wp_http_referer" value="/2010/12/02/simple-reverse-geocoding-with-couchdb/" type="hidden">
+			<p id="bsub-subscribe-button"><input value="Sign me up" type="submit"></p>
+			</form>
+					<div id="bsub-credit"><a href="http://wordpress.com/signup/?ref=lof">Powered by WordPress.com</a></div>
+		</div><!-- #bitsubscribe -->
+	</div><!-- #bit -->
+<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/sharing.js"></script>
+		<script type="text/javascript">
+		jQuery(document).on( 'ready post-load', function(){
+			jQuery( 'a.share-facebook' ).on( 'click', function() {
+				window.open( jQuery(this).attr( 'href' ), 'wpcomfacebook', 'menubar=1,resizable=1,width=600,height=400' );
+				return false;
+			});
+		});
+		</script>
+				<script type="text/javascript">
+		jQuery(document).on( 'ready post-load', function(){
+			jQuery( 'a.share-twitter' ).on( 'click', function() {
+				window.open( jQuery(this).attr( 'href' ), 'wpcomtwitter', 'menubar=1,resizable=1,width=600,height=350' );
+				return false;
+			});
+		});
+		</script>
+		<script type="text/javascript" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/devicepx.js"></script>
+<script type="text/javascript">
+// <![CDATA[
+(function() {
+try{
+  if ( window.external &&'msIsSiteMode' in window.external) {
+    if (window.external.msIsSiteMode()) {
+      var jl = document.createElement('script');
+      jl.type='text/javascript';
+      jl.async=true;
+      jl.src='/wp-content/plugins/ie-sitemode/custom-jumplist.php';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jl, s);
+    }
+  }
+}catch(e){}
+})();
+// ]]>
+</script><script src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/w.js" type="text/javascript"></script>
+<script type="text/javascript">
+st_go({'blog':'18135076','v':'wpcom','tz':'2','user_id':'0','post':'4','subd':'bravenewmethod'});
+ex_go({'crypt':'UE5XaGUuOTlwaD85flAmcm1mcmZsaDhkV11YdWFnNncxc1tjZG9XVXhRb2JySWZQY1U1P1R0bFY4JllzT2lpUyZpdDk9Q1NPMlFYW01ELjhWOVQ5YU5Wd0w0TUhLMk1jMXIyNDUwMXpXUGJaelI4Zmt1aGpiRSZ8OE83ZjUuek5XL29OUnlvWkNdM2x6WmM/ZTVqanpZdWpuLXQ/SS1qazI9K1JEMW1CWj9weHElcWtMb0NiXU1XMjlwT3J2VC1qeFJCS11rOHd6T05WM2c0VjN1WDYsRkhab1F0RjdQfF9fPWhrfmV6V0hZeSY5Ni5TXWh5RC5dRnd4NkdDdWZuYTBWcz9mLjJtZ0o1ajFBVTdbLg=='});
+addLoadEvent(function(){linktracker_init('18135076',4);});
+	</script><img id="wpstats" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/g_002.gif" alt=""><img id="wpstats2" src="Simple%20Reverse%20Geocoding%20with%20CouchDB%20%C2%AB%20Brave%20New%20Method_files/g.gif" alt="" style="display:none">
+<noscript><img src="http://stats.wordpress.com/b.gif?v=noscript" style="height:0px;width:0px;overflow:hidden" alt="" /></noscript>
+
+
+</body></html>
