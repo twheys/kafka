@@ -10,10 +10,11 @@
 
 -define(ID, <<"_id">>).
 -define(REV, <<"_rev">>).
--define(TYPE, <<"room">>).
 -define(NAME, <<"name">>).
 -define(USERS_SESSIONS, <<"users">>).
 -define(MAX_USERS, <<"max_users">>).
+
+-define(TYPE, <<"room">>).
 
 new({Json}) when is_list(Json) ->
     ?TYPE = proplists:get_value(<<"g_type">>, Json),

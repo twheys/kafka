@@ -9,10 +9,10 @@
 
 % Module application exports
 -export([register/3,
-		 login/2,
-		 get_auth_by_name/1,
+         login/2,
+         get_auth_by_name/1,
          get_auth_by_email/1,
-		 is_admin/1]).
+         is_admin/1]).
 
 % Module namespace - Must be an atom.
 -define(NAME, auth).
@@ -43,8 +43,7 @@ start_link() -> goethe_module:start_link(?NAME, ?MODULE, [], []).
 %    Called when a code update occurs
 %
 %%==========================================================================
-init(_Args) ->
-    {ok, #state{}}.
+init(_Args) -> {ok, #state{}}.
 terminate(_Reason, _State) -> normal.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
@@ -60,10 +59,8 @@ register(Email, UserName, Password) -> goethe_module:internal(?NAME, {register, 
 login(name, {UserName, Password}) -> goethe_module:internal(?NAME, {login_name, {UserName, Password}});
 login(email, {Email, Password}) -> goethe_module:internal(?NAME, {login_email, {Email, Password}}).
 
-get_auth_by_name(UserName) ->
-    goethe:get({"auth", "by_name"}, UserName, goethe_principle).
-get_auth_by_email(Email) ->
-    goethe:get({"auth", "by_email"}, Email, goethe_principle).
+get_auth_by_name(UserName) -> goethe:get({"auth", "by_name"}, UserName, goethe_principle).
+get_auth_by_email(Email) -> goethe:get({"auth", "by_email"}, Email, goethe_principle).
 
 is_admin(Role) ->
 	case Role of
@@ -83,17 +80,17 @@ is_admin(Role) ->
 handle_internal({register, {Email, UserName, Password}}, State) ->
     logger:debug("Received register from client"),
     Principle = goethe_principle:new(Email, UserName, Password),
-	case Principle:save() of
-		ok -> {reply, {ok, Principle}, State};
-		{validation, ValidationFailure} -> {validation, ValidationFailure};
-		{error, Reason} -> {error, Reason}
-	end;
+    case Principle:save() of
+        ok -> {reply, {ok, Principle}, State};
+        {validation, ValidationFailure} -> {validation, ValidationFailure};
+        {error, Reason} -> {error, Reason}
+    end;
 
 handle_internal({login_name, {UserName, Password}}, State) ->
     logger:debug("Received email from client"),
     {ok, Principle} = get_auth_by_name(UserName),
     case auth(Principle, Password) of
-		ok ->{reply, {ok, Principle}, State};
+        ok ->{reply, {ok, Principle}, State};
         {error, badcreds} -> {nack, <<"bad_credentials">>, State}
     end;
 
@@ -101,7 +98,7 @@ handle_internal({login_email, {Email, Password}}, State) ->
     logger:debug("Received email from client"),
     {ok, Principle} = get_auth_by_email(Email),
     case auth(Principle, Password) of
-		ok -> {reply, {ok, Principle}, State};
+        ok -> {reply, {ok, Principle}, State};
         {error, badcreds} -> {nack, <<"bad_credentials">>, State}
     end;
 

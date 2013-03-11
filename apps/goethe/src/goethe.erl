@@ -22,10 +22,10 @@
 -export([ack/2,ack/3,nack/3,nack/4,notify/1,notify/2,notify/3,get_session_by_username/1]).
 
 % public db functions
--export([db/0,get/2,get/3,clean/1,clean/2,save/1,get_enum/1,get_enum/2]).
+-export([db/0,get/2,get/3,get/4,clean/1,clean/2,save/1,get_enum/1,get_enum/2]).
 
 -record(state, {
-procs=0,listener,db,modules=[],connections=[],nodes=[]
+listener,db,modules
 }).
 
 start() -> gen_server:start({local, ?MODULE}, ?MODULE, [], []).
@@ -72,20 +72,29 @@ nack(Session, Action, Code) ->
 nack(Session, Action, Code, Info) ->
     gen_server:cast(?MODULE, {nack, {Session, Action, Code, Info}}).
 
+
 get(View, As) ->
     gen_server:call(?MODULE, {get, {View, [], As}}).
-get(View, Key, As) ->
-    gen_server:call(?MODULE, {get, {View, [{key, Key}], As}}).
+get(View, Key, As) when is_binary(Key)->
+    gen_server:call(?MODULE, {get, {View, [{key, Key}], As}});
+get(View, Criteria, As) when is_list(Criteria) ->
+    gen_server:call(?MODULE, {get, {View, Criteria, As}}).
+get(View, Key, Criteria, As) when is_list(Criteria) ->
+    gen_server:call(?MODULE, {get, {View, [{key, Key} | Criteria], As}}).
+
 clean(View) ->
     gen_server:call(?MODULE, {clean, {View, []}}).
 clean(View, Key) ->
     gen_server:call(?MODULE, {clean, {View, [{key, Key}]}}).
+
 save(Doc) ->
     gen_server:call(?MODULE, {save, {Doc}}).
+
 get_enum(View) ->
     gen_server:call(?MODULE, {get_enum, {View, []}}).
 get_enum(View, Key) ->
     gen_server:call(?MODULE, {get_enum, {View, [{key, Key}]}}).
+
 
 get_session_by_username(UserName) ->
     get({"session", "by_username"}, UserName, goethe_session).
@@ -124,10 +133,6 @@ start_db() ->
 	logger:info("Database connection successfully initialized! Version: ~p", [binary_to_list(Version)]),
     {ok, Db}.
 
-
-handle_call(get_modules, _From, #state{modules=Modules} = State) ->
-    logger:trace("Get modules request"),
-    {reply, {ok, Modules}, State};
 
 handle_call(db, _From, #state{db=Db} = State) ->
     {reply, {ok, Db}, State};
@@ -209,12 +214,12 @@ handle_call(Request, _From, State) ->
     {reply, inv_call, State}.
 
 
-handle_cast({recv, {ready, {Module, Action, Data}, Session}}, #state{modules=_Modules} = State) ->
+handle_cast({recv, {ready, {Module, Action, Data}, Session}}, State) ->
     logger:debug("Action: ~p.~p:~p", [Module, Action, Data]),
     spawn(goethe_module, inbound, [Module, {Action, Data}, Session]),
     {noreply, State};
 
-handle_cast({recv, {ConnectionStatus, {_, Action, Data}, Session}}, #state{modules=_Modules} = State) ->
+handle_cast({recv, {ConnectionStatus, {_, Action, Data}, Session}}, State) ->
     logger:debug("Preliminary Action: ~p.~p:~p", [server, Action, Data]),
     if 
         encrypt == Action, pencrypt =/= ConnectionStatus ->
@@ -232,22 +237,10 @@ handle_cast({register_module, {Module}}, #state{modules=Modules} = State) ->
     FilteredModules = lists:filter(fun(X) -> X =/= Module end, Modules), 
     error_logger:info_msg("Module [~p] successfully loaded!", [Module]),
     {noreply, State#state{modules=[Module | FilteredModules]}};
-
-handle_cast({register_connection, {Connection}}, #state{connections=Connections,procs=Procs} = State) ->
-    NewProcs = Procs+1,
-    logger:info("Client connected! Currently connected: ", [NewProcs]),
-    {noreply, State#state{procs=NewProcs,connections=[Connection | Connections]}};
-
-handle_cast({release_connection, {Connection}}, #state{connections=Connections,procs=Procs} = State) ->
-    NewProcs = Procs-1,
-    logger:info("Client disconnected! Currently connected: ", [NewProcs]),
-    FilteredConnections = lists:filter(fun(X) -> X =/= Connection end, Connections),
-    {noreply, State#state{procs=NewProcs,connections=FilteredConnections}};
     
 handle_cast({notify, {Event, Data}}, #state{modules=Modules} = State) ->
     logger:info("Event: ~p:~p", [Event, Data]),
-    F = fun(Module) -> goethe_module:notify(Module, Event, Data) end,
-    spawn(lists, foreach, [F, Modules]),
+    do_notify(Modules, Event, Data),
     {noreply, State};
 
 handle_cast({ack, {Session, Action, Info}}, State) ->
@@ -276,11 +269,23 @@ handle_cast(Request, State) ->
     logger:info("Unexpected function cast in goethe: ~p", [Request]),
     {noreply, State}.
 
-    
+
 handle_info(_Info, State) -> {noreply, State}.
-terminate(Reason, #state{listener=Listener,db=_Db}) ->
+terminate(Reason, #state{listener=Listener,db=Db,modules=Modules}) ->
     logger:info("Received shut down hook. Reason: ~p. Stopping socket server.", [Reason]),
+    % Stop listening
     Listener ! stop,
+    
+    % Clean Sessions in DB
+    try couchbeam_view:fold(
+        fun({[{<<"id">>,_},{<<"key">>,_},{<<"value">>,Value}]}, Acc) ->
+            [Value|Acc]
+        end, Db, "session", "all", [])
+    catch _ -> ignore
+    end,
+    
+    % Notify modules of Core termnating
+    do_notify(Modules, reload, {server}),
     ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
@@ -290,6 +295,11 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %  util functions
 %
 %%==========================================================================
+do_notify(Modules, Event, Data) ->
+    F = fun(Module) -> goethe_module:notify(Module, Event, Data) end,
+    spawn(lists, foreach, [F, Modules]),
+    ok.
+
 timestamp() ->
 	{{Year,Month,Day},{Hour,Min,Sec}} = calendar:local_time(),
 	String = lists:flatten(io_lib:fwrite("~4..0B-~2..0B-~2..0BT~2B:~2.10.0B:~2.10.0B",
