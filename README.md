@@ -1,8 +1,7 @@
-goethe
+kafka
 ======
 
-Erlang game server hopeful
-
+Provisionary Erlang TCP socket server
 
 TODO
 ====
